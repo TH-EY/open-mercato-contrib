@@ -54,8 +54,8 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 ### Phase 3: Proposal UI and edit path
 
-- [ ] 3.1 Show unit and per-line confidence in the order preview, add the discrepancy copy in all locales, with component tests
-- [ ] 3.2 Keep the unit when an order action is edited in the sales document form
+- [x] 3.1 Show unit and per-line confidence in the order preview, add the discrepancy copy in all locales, with component tests — f8c9f349f
+- [x] 3.2 Keep the unit when an order action is edited in the sales document form — de77ec0b0
 
 ### Phase 4: Docs and integration coverage
 
