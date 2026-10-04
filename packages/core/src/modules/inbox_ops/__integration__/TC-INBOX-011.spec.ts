@@ -9,15 +9,19 @@ import {
   type InboxProposalActionDetail,
 } from '@open-mercato/core/modules/core/__integration__/helpers/inboxFixtures';
 import { deleteSalesEntityIfExists } from '@open-mercato/core/modules/core/__integration__/helpers/salesFixtures';
+import { deleteCatalogProductIfExists } from '@open-mercato/core/modules/core/__integration__/helpers/catalogFixtures';
 
 /**
  * TC-INBOX-011: Order line unit of measure and confidence
  *
  * An order/quote action's line items carry an optional unit of measure and
- * confidence. The edit route validates both, the proposal API returns them, and
- * accepting the action creates sales lines with the unit stored in
- * `quantity_unit`. The line items are set through the edit route so the
- * assertions do not depend on what the model extracted.
+ * confidence. The edit route validates them, the proposal API returns them, and
+ * accepting the action creates sales lines with the unit in `quantity_unit`:
+ * custom lines take any dictionary unit, catalog lines only the product's base
+ * unit or a unit it converts from — anything else fails the action with a 400
+ * that names the line. Line items are set through the edit route so the
+ * assertions do not depend on what the model extracted. Units come from the
+ * unit dictionary seeded with the catalog defaults (`kg`, `g`, `m2`).
  *
  * Extraction requires a configured LLM provider. When none is available, or the
  * model proposes no order/quote action, the test is skipped, matching TC-INBOX-003.
@@ -44,6 +48,29 @@ async function createChannel(request: APIRequestContext, token: string, name: st
   return body!.id as string;
 }
 
+async function createProductSoldInKilograms(request: APIRequestContext, token: string, stamp: number): Promise<string> {
+  const response = await apiRequest(request, 'POST', '/api/catalog/products', {
+    token,
+    data: {
+      title: `TC-INBOX-011 Steel Wire ${stamp}`,
+      sku: `TC-INBOX-011-${stamp}`,
+      description: 'Long enough description for the inbox line unit integration test. It keeps create validation satisfied.',
+      defaultUnit: 'kg',
+    },
+  });
+  expect(response.ok(), `Failed to create product: ${response.status()}`).toBeTruthy();
+  const body = await readJsonSafe<{ id?: string }>(response);
+  expect(body?.id, 'No id returned when creating product').toBeTruthy();
+  const productId = body!.id as string;
+
+  const conversion = await apiRequest(request, 'POST', '/api/catalog/product-unit-conversions', {
+    token,
+    data: { productId, unitCode: 'g', toBaseFactor: 0.001, isActive: true },
+  });
+  expect(conversion.ok(), `Failed to create unit conversion: ${conversion.status()}`).toBeTruthy();
+  return productId;
+}
+
 function findOrderAction(actions: InboxProposalActionDetail[]): InboxProposalActionDetail | null {
   return actions.find((action) =>
     action.status === 'pending' && (action.actionType === 'create_order' || action.actionType === 'create_quote'),
@@ -55,6 +82,7 @@ test.describe('TC-INBOX-011: Order line unit of measure and confidence', () => {
   const createdEmailIds: string[] = [];
   const createdDocuments: Array<{ path: string; id: string }> = [];
   const createdChannelIds: string[] = [];
+  const createdProductIds: string[] = [];
 
   test.beforeAll(async ({ request }) => {
     test.setTimeout(90000);
@@ -65,6 +93,9 @@ test.describe('TC-INBOX-011: Order line unit of measure and confidence', () => {
     for (const document of createdDocuments) {
       await deleteSalesEntityIfExists(request, token, document.path, document.id);
     }
+    for (const productId of createdProductIds) {
+      await deleteCatalogProductIfExists(request, token, productId);
+    }
     for (const channelId of createdChannelIds) {
       await deleteSalesEntityIfExists(request, token, '/api/sales/channels', channelId);
     }
@@ -74,7 +105,8 @@ test.describe('TC-INBOX-011: Order line unit of measure and confidence', () => {
   });
 
   test('validates, returns and executes line units and confidence', async ({ request }) => {
-    test.setTimeout(90000);
+    test.setTimeout(120000);
+    const stamp = Date.now();
 
     const result = await submitTextExtraction(request, token, {
       text: [
@@ -83,7 +115,7 @@ test.describe('TC-INBOX-011: Order line unit of measure and confidence', () => {
         '',
         'Hello,',
         'We confirm the order, please go ahead:',
-        '- 12 kg Steel Wire SW-2 at $3.50 per kg',
+        '- 500 g Steel Wire SW-2',
         '- 40 m2 Floor Tiles FT-60 at $18.00 per m2',
         '',
         'Customer reference: PO-TC011',
@@ -112,38 +144,46 @@ test.describe('TC-INBOX-011: Order line unit of measure and confidence', () => {
     }
     const actionPath = `/api/inbox_ops/proposals/${proposalId}/actions/${action.id}`;
 
-    const invalidEdit = await apiRequest(request, 'PATCH', actionPath, {
-      token,
-      data: { payload: { lineItems: [{ productName: 'TC-INBOX-011 Steel Wire', quantity: '12', confidence: 1.5 }] } },
-    });
-    expect(invalidEdit.status()).toBe(400);
-
-    const channelId = await createChannel(request, token, `TC-INBOX-011 ${Date.now()}`);
+    const channelId = await createChannel(request, token, `TC-INBOX-011 ${stamp}`);
     createdChannelIds.push(channelId);
+    const productId = await createProductSoldInKilograms(request, token, stamp);
+    createdProductIds.push(productId);
 
-    const lineItems = [
-      { productName: 'TC-INBOX-011 Steel Wire', quantity: '12', quantityUnit: 'kg', unitPrice: '3.5', kind: 'service', confidence: 0.9 },
-      { productName: 'TC-INBOX-011 Delivery', quantity: '1', unitPrice: '20', kind: 'service' },
-    ];
+    const orderFields = { customerName: 'TC-INBOX-011 Customer', currencyCode: 'USD', channelId };
+    const wireLine = { productName: 'TC-INBOX-011 Steel Wire', productId, quantity: '500', unitPrice: '0.01', kind: 'product' };
+    const tilesLine = { productName: 'TC-INBOX-011 Floor Tiles', quantity: '40', quantityUnit: 'm2', unitPrice: '18', kind: 'service', confidence: 0.9 };
+    const deliveryLine = { productName: 'TC-INBOX-011 Delivery', quantity: '1', unitPrice: '20', kind: 'service' };
+
+    const tooLongUnit = await apiRequest(request, 'PATCH', actionPath, {
+      token,
+      data: { payload: { ...orderFields, lineItems: [{ ...deliveryLine, quantityUnit: 'x'.repeat(26) }] } },
+    });
+    expect(tooLongUnit.status()).toBe(400);
+    const tooLongBody = await readJsonSafe<{ error?: string }>(tooLongUnit);
+    expect(tooLongBody?.error ?? '').toContain('quantityUnit');
+
+    const unconvertibleEdit = await apiRequest(request, 'PATCH', actionPath, {
+      token,
+      data: { payload: { ...orderFields, lineItems: [{ ...wireLine, quantityUnit: 'm2' }, tilesLine, deliveryLine] } },
+    });
+    expect(unconvertibleEdit.status()).toBe(200);
+    const unconvertibleAccept = await apiRequest(request, 'POST', `${actionPath}/accept`, { token });
+    expect(unconvertibleAccept.status()).toBe(400);
+    const unconvertibleBody = await readJsonSafe<{ error?: string }>(unconvertibleAccept);
+    expect(unconvertibleBody?.error ?? '').toContain('Unit "m2" of line "TC-INBOX-011 Steel Wire"');
+
     const editResponse = await apiRequest(request, 'PATCH', actionPath, {
       token,
-      data: {
-        payload: {
-          customerName: 'TC-INBOX-011 Customer',
-          currencyCode: 'USD',
-          channelId,
-          lineItems,
-        },
-      },
+      data: { payload: { ...orderFields, lineItems: [{ ...wireLine, quantityUnit: 'g', confidence: 0.7 }, tilesLine, deliveryLine] } },
     });
     expect(editResponse.status()).toBe(200);
 
     const afterEdit = await fetchProposalDetail(request, token, proposalId);
     const editedAction = afterEdit?.actions.find((candidate) => candidate.id === action.id);
     const editedLines = (editedAction?.payload?.lineItems ?? []) as JsonRecord[];
-    expect(editedLines[0]?.quantityUnit).toBe('kg');
-    expect(editedLines[0]?.confidence).toBe(0.9);
-    expect(editedLines[1]).not.toHaveProperty('quantityUnit');
+    expect(editedLines[0]?.quantityUnit).toBe('g');
+    expect(editedLines[0]?.confidence).toBe(0.7);
+    expect(editedLines[2]).not.toHaveProperty('quantityUnit');
 
     const acceptResponse = await apiRequest(request, 'POST', `${actionPath}/accept`, { token });
     const acceptBody = await readJsonSafe<{ action?: { createdEntityId?: string; createdEntityType?: string } }>(acceptResponse);
@@ -162,10 +202,14 @@ test.describe('TC-INBOX-011: Order line unit of measure and confidence', () => {
     const linesResponse = await apiRequest(request, 'GET', linesPath, { token });
     expect(linesResponse.ok(), `Failed to read lines: ${linesResponse.status()}`).toBeTruthy();
     const lines = readItems(await readJsonSafe<unknown>(linesResponse));
-    const wireLine = lines.find((line) => line.name === 'TC-INBOX-011 Steel Wire');
-    const deliveryLine = lines.find((line) => line.name === 'TC-INBOX-011 Delivery');
-    expect(wireLine, 'Steel wire line should be created').toBeTruthy();
-    expect(wireLine?.quantity_unit ?? wireLine?.quantityUnit).toBe('kg');
-    expect(deliveryLine?.quantity_unit ?? deliveryLine?.quantityUnit ?? null).toBeNull();
+    const byName = (name: string) => lines.find((line) => line.name === name);
+
+    const createdWire = byName('TC-INBOX-011 Steel Wire');
+    expect(createdWire, 'Steel wire line should be created').toBeTruthy();
+    expect(createdWire?.quantity_unit).toBe('g');
+    expect(createdWire?.normalized_unit).toBe('kg');
+    expect(Number(createdWire?.normalized_quantity)).toBeCloseTo(0.5, 6);
+    expect(byName('TC-INBOX-011 Floor Tiles')?.quantity_unit).toBe('m2');
+    expect(byName('TC-INBOX-011 Delivery')?.quantity_unit ?? null).toBeNull();
   });
 });
