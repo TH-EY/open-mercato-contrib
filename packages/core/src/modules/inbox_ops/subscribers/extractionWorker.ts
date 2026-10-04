@@ -9,6 +9,7 @@ import { matchContacts } from '../lib/contactMatcher'
 import { buildExtractionSystemPrompt, buildExtractionUserPrompt } from '../lib/extractionPrompt'
 import { REQUIRED_FEATURES_MAP } from '../lib/constants'
 import { fetchCatalogProductsForExtraction } from '../lib/catalogLookup'
+import { fetchUnitsForExtraction, findUnitCode, type ExtractionUnit } from '../lib/unitLookup'
 import { enrichOrderPayload } from '../lib/payloadEnrichment'
 import { validatePrices, type CatalogPricingServiceLike } from '../lib/priceValidator'
 import { extractParticipantsFromThread } from '../lib/emailParser'
@@ -50,6 +51,8 @@ interface ExtractionEntityClasses {
   salesOrder?: EntityClass<{ id: string; orderNumber: string; customerReference?: string | null; tenantId?: string; organizationId?: string; deletedAt?: Date | null }>
   salesChannel?: EntityClass<{ id: string; name: string; tenantId?: string; organizationId?: string; deletedAt?: Date | null }>
   customerAddress?: EntityClass<{ id: string; isPrimary: boolean; tenantId?: string; organizationId?: string; entity?: { id: string } | string; createdAt?: Date }>
+  dictionary?: EntityClass<{ id: string; organizationId: string; tenantId: string; key?: string; isActive?: boolean; deletedAt?: Date | null; createdAt?: Date }>
+  dictionaryEntry?: EntityClass<{ value: string; normalizedValue?: string | null; label?: string | null; dictionary?: unknown; organizationId?: string; tenantId?: string; position?: number }>
 }
 
 interface DiscrepancyInput {
@@ -78,6 +81,8 @@ function resolveEntityClasses(ctx: ResolverContext): ExtractionEntityClasses {
     salesOrder: tryResolve(ctx, 'SalesOrder'),
     salesChannel: tryResolve(ctx, 'SalesChannel'),
     customerAddress: tryResolve(ctx, 'CustomerAddress'),
+    dictionary: tryResolve(ctx, 'Dictionary'),
+    dictionaryEntry: tryResolve(ctx, 'DictionaryEntry'),
   }
 }
 
@@ -164,11 +169,18 @@ export default async function handle(payload: EmailReceivedPayload, ctx: Resolve
         : undefined,
     )
 
+    // Step 2c: Fetch the tenant's units of measure for line units
+    const units = await fetchUnitsForExtraction(em, scope,
+      entityClasses.dictionary && entityClasses.dictionaryEntry
+        ? { dictionaryClass: entityClasses.dictionary, dictionaryEntryClass: entityClasses.dictionaryEntry }
+        : undefined,
+    )
+
     // Step 3: Call LLM for extraction
     const maxTextSize = parseInt(process.env.INBOX_OPS_MAX_TEXT_SIZE || '204800', 10)
     const truncatedText = fullText.slice(0, maxTextSize)
 
-    const systemPrompt = await buildExtractionSystemPrompt(contactMatches, catalogProducts, undefined, workingLanguage)
+    const systemPrompt = await buildExtractionSystemPrompt(contactMatches, catalogProducts, undefined, workingLanguage, undefined, units)
     const userPrompt = buildExtractionUserPrompt(truncatedText)
 
     let extractionResult: ReturnType<typeof extractionOutputSchema.parse>
@@ -266,7 +278,16 @@ export default async function handle(payload: EmailReceivedPayload, ctx: Resolve
       if (action.actionType === 'create_order' || action.actionType === 'create_quote') {
         const parsedPayload = safeParsePayloadJson(action.payloadJson)
 
-        normalizeOrderPayloadFields(parsedPayload)
+        const unrecognizedUnits = normalizeOrderPayloadFields(parsedPayload, units)
+        for (const unit of unrecognizedUnits) {
+          enrichmentDiscrepancies.push({
+            actionIndex,
+            type: 'quantity_mismatch',
+            severity: 'error',
+            description: 'inbox_ops.discrepancy.desc.unit_not_recognized',
+            foundValue: unit,
+          })
+        }
 
         const { payload: enriched, warnings } = await enrichOrderPayload(parsedPayload, {
           em,
@@ -612,10 +633,11 @@ export default async function handle(payload: EmailReceivedPayload, ctx: Resolve
   }
 }
 
-function normalizeOrderPayloadFields(payload: Record<string, unknown>): void {
+function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: ExtractionUnit[] | null): string[] {
   const lineItems = Array.isArray(payload.lineItems)
     ? (payload.lineItems as Record<string, unknown>[])
     : []
+  const unrecognizedUnits: string[] = []
   for (const item of lineItems) {
     if (!item.productName && typeof item.description === 'string') {
       item.productName = item.description
@@ -626,7 +648,41 @@ function normalizeOrderPayloadFields(payload: Record<string, unknown>): void {
     if (typeof item.unitPrice === 'number') {
       item.unitPrice = String(item.unitPrice)
     }
+
+    if (item.quantityUnit === undefined && item.unit !== undefined) {
+      item.quantityUnit = item.unit
+      delete item.unit
+    }
+    const statedUnit = typeof item.quantityUnit === 'string' ? item.quantityUnit.trim() : ''
+    if (!statedUnit) {
+      delete item.quantityUnit
+    } else if (units === null) {
+      item.quantityUnit = statedUnit
+    } else {
+      const unitCode = findUnitCode(statedUnit, units)
+      item.quantityUnit = unitCode ?? statedUnit
+      if (!unitCode && !unrecognizedUnits.includes(statedUnit)) {
+        unrecognizedUnits.push(statedUnit)
+      }
+    }
+
+    const confidence = parseLineConfidence(item.confidence)
+    if (confidence === undefined) {
+      delete item.confidence
+    } else {
+      item.confidence = confidence
+    }
   }
+  return unrecognizedUnits
+}
+
+function parseLineConfidence(value: unknown): number | undefined {
+  const parsed = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && value.trim()
+      ? Number(value)
+      : Number.NaN
+  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : undefined
 }
 
 function buildContactActionsForUnmatchedParticipants(

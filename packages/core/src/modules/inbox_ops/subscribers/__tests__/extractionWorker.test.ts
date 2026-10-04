@@ -38,6 +38,12 @@ jest.mock('@open-mercato/core/modules/inbox_ops/lib/catalogLookup', () => ({
   fetchCatalogProductsForExtraction: (...args: unknown[]) => mockFetchCatalog(...args),
 }))
 
+const mockFetchUnits = jest.fn()
+jest.mock('@open-mercato/core/modules/inbox_ops/lib/unitLookup', () => ({
+  ...jest.requireActual('@open-mercato/core/modules/inbox_ops/lib/unitLookup'),
+  fetchUnitsForExtraction: (...args: unknown[]) => mockFetchUnits(...args),
+}))
+
 const mockValidatePrices = jest.fn()
 jest.mock('@open-mercato/core/modules/inbox_ops/lib/priceValidator', () => ({
   validatePrices: (...args: unknown[]) => mockValidatePrices(...args),
@@ -98,6 +104,8 @@ const MockSalesChannel = class {} as any
 const MockCatalogProduct = class {} as any
 const MockCatalogProductPrice = class {} as any
 const MockCustomerEntity = class {} as any
+const MockDictionary = class {} as any
+const MockDictionaryEntry = class {} as any
 
 const mockCtx = {
   resolve: jest.fn((token: string) => {
@@ -107,6 +115,8 @@ const mockCtx = {
     if (token === 'CatalogProduct') return MockCatalogProduct
     if (token === 'CatalogProductPrice') return MockCatalogProductPrice
     if (token === 'CustomerEntity') return MockCustomerEntity
+    if (token === 'Dictionary') return MockDictionary
+    if (token === 'DictionaryEntry') return MockDictionaryEntry
     throw new Error(`Unknown DI token: ${token}`)
   }),
 }
@@ -189,6 +199,7 @@ describe('extractionWorker', () => {
     mockCreate.mockImplementation((_entity: unknown, data: Record<string, unknown>) => ({ ...data }))
     mockMatchContacts.mockResolvedValue([])
     mockFetchCatalog.mockResolvedValue([])
+    mockFetchUnits.mockResolvedValue(null)
     mockValidatePrices.mockResolvedValue([])
     mockFindOneWithDecryption.mockResolvedValue(null)
   })
@@ -707,6 +718,122 @@ describe('extractionWorker', () => {
     })
   })
 
+  describe('line units and confidence', () => {
+    const tenantUnits = [
+      { code: 'kg', normalizedCode: 'kg', label: 'Kilogram (weight)' },
+      { code: 'pc', normalizedCode: 'pc', label: 'Piece (piece)' },
+    ]
+
+    function mockOrderExtraction(lineItems: Record<string, unknown>[]) {
+      mockRunExtraction.mockResolvedValueOnce({
+        object: makeExtractionResult({
+          proposedActions: [
+            {
+              actionType: 'create_order',
+              description: 'Create order',
+              confidence: 0.9,
+              payloadJson: JSON.stringify({
+                customerName: 'John Doe',
+                channelId: '123e4567-e89b-4d56-a456-426614174000',
+                currencyCode: 'EUR',
+                lineItems,
+              }),
+            },
+          ],
+        }),
+        totalTokens: 100,
+        modelWithProvider: 'anthropic:test-model',
+      })
+    }
+
+    function createdOrderAction(): Record<string, unknown> {
+      const call = mockCreate.mock.calls.find(
+        ([entity, data]: [unknown, Record<string, unknown>]) =>
+          entity === InboxProposalAction && data.actionType === 'create_order',
+      )
+      expect(call).toBeDefined()
+      return call![1] as Record<string, unknown>
+    }
+
+    function createdDiscrepancies(type: string): Record<string, unknown>[] {
+      return mockCreate.mock.calls
+        .filter(([entity, data]: [unknown, Record<string, unknown>]) => entity === InboxDiscrepancy && data.type === type)
+        .map(([, data]: [unknown, Record<string, unknown>]) => data)
+    }
+
+    beforeEach(() => {
+      mockNativeUpdate.mockResolvedValue(1)
+      mockFindOneWithDecryption.mockResolvedValueOnce(makeEmail())
+    })
+
+    it('loads the tenant units through the dictionary entities and passes them to the prompt', async () => {
+      mockFetchUnits.mockResolvedValueOnce(tenantUnits)
+      mockOrderExtraction([{ productName: 'Widget', quantity: '1' }])
+
+      await handle(basePayload, mockCtx as any)
+
+      expect(mockFetchUnits).toHaveBeenCalledWith(
+        mockEm,
+        { tenantId: 'tenant-1', organizationId: 'org-1' },
+        { dictionaryClass: MockDictionary, dictionaryEntryClass: MockDictionaryEntry },
+      )
+      const { buildExtractionSystemPrompt } = jest.requireMock('@open-mercato/core/modules/inbox_ops/lib/extractionPrompt')
+      expect(buildExtractionSystemPrompt).toHaveBeenLastCalledWith([], [], undefined, 'en', undefined, tenantUnits)
+    })
+
+    it('stores recognized units as their code, keeps unknown units as written and flags each unknown unit once', async () => {
+      mockFetchUnits.mockResolvedValueOnce(tenantUnits)
+      mockOrderExtraction([
+        { productName: 'Cement', quantity: '10', quantityUnit: ' KG ', confidence: '0.8' },
+        { productName: 'Sand', quantity: '2', unit: 't', confidence: 1.7 },
+        { productName: 'Gravel', quantity: '1', quantityUnit: 't', confidence: 0.4 },
+        { productName: 'Nails', quantity: '100', quantityUnit: '   ', confidence: 'high' },
+      ])
+
+      await handle(basePayload, mockCtx as any)
+
+      const action = createdOrderAction()
+      const lines = (action.payload as { lineItems: Record<string, unknown>[] }).lineItems
+      expect(lines[0]).toEqual(expect.objectContaining({ quantityUnit: 'kg', confidence: 0.8 }))
+      expect(lines[1]).toEqual(expect.objectContaining({ quantityUnit: 't' }))
+      expect(lines[1]).not.toHaveProperty('unit')
+      expect(lines[1]).not.toHaveProperty('confidence')
+      expect(lines[2]).toEqual(expect.objectContaining({ quantityUnit: 't', confidence: 0.4 }))
+      expect(lines[3]).not.toHaveProperty('quantityUnit')
+      expect(lines[3]).not.toHaveProperty('confidence')
+
+      const unitDiscrepancies = createdDiscrepancies('quantity_mismatch')
+      expect(unitDiscrepancies).toHaveLength(1)
+      expect(unitDiscrepancies[0]).toEqual(expect.objectContaining({
+        severity: 'error',
+        description: 'inbox_ops.discrepancy.desc.unit_not_recognized',
+        foundValue: 't',
+        actionId: action.id,
+      }))
+    })
+
+    it('keeps units as written without flagging them when the units cannot be loaded', async () => {
+      mockOrderExtraction([{ productName: 'Cement', quantity: '10', quantityUnit: ' Bags ' }])
+
+      await handle(basePayload, mockCtx as any)
+
+      const lines = (createdOrderAction().payload as { lineItems: Record<string, unknown>[] }).lineItems
+      expect(lines[0].quantityUnit).toBe('Bags')
+      expect(createdDiscrepancies('quantity_mismatch')).toHaveLength(0)
+    })
+
+    it('flags every stated unit when the tenant has no unit dictionary', async () => {
+      mockFetchUnits.mockResolvedValueOnce([])
+      mockOrderExtraction([{ productName: 'Cement', quantity: '10', quantityUnit: 'kg' }])
+
+      await handle(basePayload, mockCtx as any)
+
+      expect(createdDiscrepancies('quantity_mismatch')).toEqual([
+        expect.objectContaining({ foundValue: 'kg' }),
+      ])
+    })
+  })
+
   describe('draft replies', () => {
     it('creates draft_reply actions from extraction output', async () => {
       mockNativeUpdate.mockResolvedValue(1)
@@ -769,6 +896,8 @@ describe('extractionWorker', () => {
         expect.anything(),
         undefined,
         'en',
+        undefined,
+        null,
       )
 
       expect(mockCreate).toHaveBeenCalledWith(
@@ -800,6 +929,8 @@ describe('extractionWorker', () => {
         expect.anything(),
         undefined,
         'de',
+        undefined,
+        null,
       )
 
       expect(mockCreate).toHaveBeenCalledWith(
