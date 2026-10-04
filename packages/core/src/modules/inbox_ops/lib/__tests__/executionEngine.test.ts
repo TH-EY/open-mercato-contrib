@@ -578,6 +578,59 @@ describe('executionEngine', () => {
     })
   })
 
+  describe('executeAction — line units', () => {
+    const payloadWithUnits = {
+      customerName: 'Acme Corp',
+      channelId: VALID_UUID,
+      currencyCode: 'EUR',
+      lineItems: [
+        { productName: 'Cement', quantity: '10', quantityUnit: 'bag', confidence: 0.6 },
+        { productName: 'Sand', quantity: '2' },
+      ],
+    }
+
+    function findCommandInput(commandId: string): Record<string, unknown> {
+      const call = mockCommandBus.execute.mock.calls.find(([id]) => id === commandId)
+      expect(call).toBeDefined()
+      return (call![1] as { input: Record<string, unknown> }).input
+    }
+
+    it('forwards each line unit to sales.orders.create and leaves lines without a unit unchanged', async () => {
+      const em = createMockEm()
+      em.nativeUpdate.mockResolvedValue(1)
+      mockFindOneWithDecryption.mockResolvedValueOnce(
+        makeAction({ id: 'a-units', status: 'processing', payload: payloadWithUnits }),
+      )
+      mockCommandBus.execute.mockResolvedValue({ result: { orderId: 'order-units-1' } })
+
+      const result = await executeAction(makeAction({ id: 'a-units', payload: payloadWithUnits }), makeCtx(em))
+
+      expect(result.success).toBe(true)
+      const lines = findCommandInput('sales.orders.create').lines as Record<string, unknown>[]
+      expect(lines[0]).toEqual(expect.objectContaining({ name: 'Cement', quantity: 10, quantityUnit: 'bag' }))
+      expect(lines[0]).not.toHaveProperty('confidence')
+      expect(lines[1]).not.toHaveProperty('quantityUnit')
+    })
+
+    it('forwards the line unit to sales.quotes.create', async () => {
+      const em = createMockEm()
+      em.nativeUpdate.mockResolvedValue(1)
+      mockFindOneWithDecryption.mockResolvedValueOnce(
+        makeAction({ id: 'a-quote-units', actionType: 'create_quote', status: 'processing', payload: payloadWithUnits }),
+      )
+      mockCommandBus.execute.mockResolvedValue({ result: { quoteId: 'quote-units-1' } })
+
+      const result = await executeAction(
+        makeAction({ id: 'a-quote-units', actionType: 'create_quote', payload: payloadWithUnits }),
+        makeCtx(em),
+      )
+
+      expect(result.success).toBe(true)
+      const lines = findCommandInput('sales.quotes.create').lines as Record<string, unknown>[]
+      expect(lines[0]).toEqual(expect.objectContaining({ quantityUnit: 'bag' }))
+    })
+  })
+
   describe('executeAction — create_order auto-switches to quote when channel requires it', () => {
     it('creates a quote instead of order when channel metadata.quotesRequired is true', async () => {
       const em = createMockEm()

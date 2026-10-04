@@ -57,6 +57,7 @@ async function executeCreateDocumentAction(
 
     if (line.productId) mappedLine.productId = line.productId
     if (line.variantId) mappedLine.productVariantId = line.variantId
+    if (line.quantityUnit) mappedLine.quantityUnit = line.quantityUnit
     if (unitPrice !== undefined) mappedLine.unitPriceNet = unitPrice
     if (line.sku || line.catalogPrice) {
       mappedLine.catalogSnapshot = {
@@ -298,12 +299,14 @@ export const inboxActions: InboxActionDefinition[] = [
     payloadSchema: orderPayloadSchema,
     label: 'Create Sales Order',
     promptSchema: `create_order / create_quote payload:
-{ customerName: string, customerEmail?: string, customerEntityId?: uuid, channelId?: uuid, currencyCode: string (3-letter ISO), taxRateId?: uuid, lineItems: [{ productName: string (REQUIRED), productId?: uuid, variantId?: uuid, sku?: string, quantity: string, unitPrice?: string, kind?: "product"|"service", description?: string }], requestedDeliveryDate?: string, notes?: string, customerReference?: string (customer's own PO number or reference code — only set if explicitly stated in the email, do NOT use the email subject), shippingAddress?: { line1?: string, line2?: string, city?: string, state?: string, postalCode?: string, country?: string, company?: string, contactName?: string }, billingAddress?: { line1?: string, line2?: string, city?: string, state?: string, postalCode?: string, country?: string, company?: string, contactName?: string } }`,
+{ customerName: string, customerEmail?: string, customerEntityId?: uuid, channelId?: uuid, currencyCode: string (3-letter ISO), taxRateId?: uuid, lineItems: [{ productName: string (REQUIRED), productId?: uuid, variantId?: uuid, sku?: string, quantity: string, quantityUnit?: string (unit of measure code), unitPrice?: string, kind?: "product"|"service", description?: string, confidence?: number (0.0-1.0) }], requestedDeliveryDate?: string, notes?: string, customerReference?: string (customer's own PO number or reference code — only set if explicitly stated in the email, do NOT use the email subject), shippingAddress?: { line1?: string, line2?: string, city?: string, state?: string, postalCode?: string, country?: string, company?: string, contactName?: string }, billingAddress?: { line1?: string, line2?: string, city?: string, state?: string, postalCode?: string, country?: string, company?: string, contactName?: string } }`,
     promptRules: [
       'ALWAYS propose a create_order or create_quote action when the customer expresses interest in buying, even if some product names are uncertain or not in the catalog. Use the best product name available; the system will flag unmatched products as discrepancies. Do NOT replace an order with a draft_reply asking for clarification — propose both if needed.',
       'Use create_order when the customer has clearly confirmed they want to proceed (e.g., "let\'s go ahead", "please process", "confirmed"). Use create_quote when the customer is still inquiring, requesting pricing, asking for a proposal, or negotiating (e.g., "could you send a quote", "what would it cost", "we\'re interested in", "can you offer"). When in doubt, prefer create_quote.',
       'For create_order / create_quote: each line item MUST have "productName" (the product name goes here, NOT in "description"). Include currencyCode and customerName.',
       'For create_order / create_quote: extract shippingAddress and billingAddress as structured objects when addresses are mentioned. Parse street, city, postal code, country from the text. Do NOT put address data in notes.',
+      'For create_order / create_quote: when a line states a unit of measure (e.g. "pcs", "kg", "m²", "bags", "t"), set "quantityUnit" to the matching code from the units of measure list; if no listed code matches, set it to the unit exactly as written. Omit "quantityUnit" when no unit is stated. Never convert the quantity into another unit.',
+      'For create_order / create_quote: set "confidence" on every line item in [0.0, 1.0] — how certain you are that its product, quantity and unit are read correctly.',
     ],
     execute: (action, ctx) => executeCreateDocumentAction(action, ctx, 'order'),
   },
