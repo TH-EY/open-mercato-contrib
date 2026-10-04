@@ -55,6 +55,7 @@
   "inbox_ops.discrepancy.desc.no_currency": "No currency could be resolved for this order. Set a currency code on the order.",
   "inbox_ops.discrepancy.desc.no_matching_contact": "No matching contact found",
   "inbox_ops.discrepancy.desc.product_not_matched": "Product could not be matched to any catalog product",
+  "inbox_ops.discrepancy.desc.unit_not_recognized": "Unit of measure not found in the units dictionary",
   "inbox_ops.discrepancy.expected": "Expected",
   "inbox_ops.discrepancy.found": "Found",
   "inbox_ops.edit_dialog.activity_type": "Activity Type",

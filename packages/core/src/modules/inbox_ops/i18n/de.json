@@ -55,6 +55,7 @@
   "inbox_ops.discrepancy.desc.no_currency": "F\u00fcr diese Bestellung konnte keine W\u00e4hrung ermittelt werden. Legen Sie einen W\u00e4hrungscode f\u00fcr die Bestellung fest.",
   "inbox_ops.discrepancy.desc.no_matching_contact": "Kein passender Kontakt gefunden",
   "inbox_ops.discrepancy.desc.product_not_matched": "Produkt konnte keinem Katalogprodukt zugeordnet werden",
+  "inbox_ops.discrepancy.desc.unit_not_recognized": "Maßeinheit im Einheitenwörterbuch nicht gefunden",
   "inbox_ops.discrepancy.expected": "Erwartet",
   "inbox_ops.discrepancy.found": "Gefunden",
   "inbox_ops.edit_dialog.activity_type": "Aktivit\u00e4tstyp",

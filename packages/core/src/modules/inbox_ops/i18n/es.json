@@ -55,6 +55,7 @@
   "inbox_ops.discrepancy.desc.no_currency": "No se pudo determinar la moneda para este pedido. Establezca un c\u00f3digo de moneda para el pedido.",
   "inbox_ops.discrepancy.desc.no_matching_contact": "No se encontr\u00f3 un contacto coincidente",
   "inbox_ops.discrepancy.desc.product_not_matched": "El producto no pudo vincularse a ning\u00fan producto del cat\u00e1logo",
+  "inbox_ops.discrepancy.desc.unit_not_recognized": "Unidad de medida no encontrada en el diccionario de unidades",
   "inbox_ops.discrepancy.expected": "Esperado",
   "inbox_ops.discrepancy.found": "Encontrado",
   "inbox_ops.edit_dialog.activity_type": "Tipo de actividad",

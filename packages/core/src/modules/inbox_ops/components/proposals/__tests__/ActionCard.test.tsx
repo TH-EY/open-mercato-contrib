@@ -4,8 +4,8 @@
 import * as React from 'react'
 import { fireEvent, screen } from '@testing-library/react'
 import { renderWithProviders } from '@open-mercato/shared/lib/testing/renderWithProviders'
-import { ActionCard } from '../ActionCard'
-import type { ActionDetail } from '../types'
+import { ActionCard, useDiscrepancyDescriptions } from '../ActionCard'
+import type { ActionDetail, DiscrepancyDetail } from '../types'
 
 function makeAction(overrides: Partial<ActionDetail> = {}): ActionDetail {
   return {
@@ -85,5 +85,73 @@ describe('ActionCard status visibility', () => {
     renderCard(makeAction({ status: 'pending' }), { onAccept })
     fireEvent.click(screen.getByRole('button', { name: /Accept/i }))
     expect(onAccept).toHaveBeenCalledWith('action-1')
+  })
+})
+
+describe('ActionCard order preview line units and confidence', () => {
+  const orderPayload = {
+    customerName: 'Acme',
+    currencyCode: 'EUR',
+    lineItems: [
+      { productName: 'Cement', quantity: '10', quantityUnit: 'bag', unitPrice: '12', confidence: 0.92 },
+      { productName: 'Sand', quantity: '2', quantityUnit: 't', confidence: 0.45 },
+      { productName: 'Gravel', quantity: '1' },
+    ],
+  }
+
+  it('shows each line unit after the quantity', () => {
+    renderCard(makeAction({ payload: orderPayload }))
+    expect(screen.getByText('10 bag')).toBeInTheDocument()
+    expect(screen.getByText('2 t')).toBeInTheDocument()
+  })
+
+  it('adds a confidence column colored by the confidence thresholds', () => {
+    renderCard(makeAction({ payload: orderPayload }))
+    expect(screen.getByRole('columnheader', { name: 'Confidence' })).toBeInTheDocument()
+    expect(screen.getByText('92%')).toHaveClass('text-status-success-text')
+    expect(screen.getByText('45%')).toHaveClass('text-status-error-text')
+  })
+
+  it('keeps the preview of a payload without units or line confidence unchanged', () => {
+    renderCard(makeAction({
+      payload: { customerName: 'Acme', currencyCode: 'EUR', lineItems: [{ productName: 'Widget', quantity: '5' }] },
+    }))
+    expect(screen.getByRole('cell', { name: '5' })).toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Confidence' })).not.toBeInTheDocument()
+  })
+})
+
+describe('ActionCard unit discrepancy', () => {
+  function CardWithResolvedDiscrepancies({ discrepancies }: { discrepancies: DiscrepancyDetail[] }) {
+    const resolveDiscrepancyDescription = useDiscrepancyDescriptions()
+    return (
+      <ActionCard
+        action={makeAction()}
+        discrepancies={discrepancies}
+        actionTypeLabels={{ create_order: 'Create Sales Order' }}
+        onAccept={jest.fn()}
+        onReject={jest.fn()}
+        onRetry={jest.fn()}
+        onEdit={jest.fn()}
+        resolveDiscrepancyDescription={resolveDiscrepancyDescription}
+      />
+    )
+  }
+
+  it('describes an unrecognized unit together with the unit found in the email', () => {
+    renderWithProviders(
+      <CardWithResolvedDiscrepancies
+        discrepancies={[{
+          id: 'd-1',
+          type: 'quantity_mismatch',
+          severity: 'error',
+          description: 'inbox_ops.discrepancy.desc.unit_not_recognized',
+          foundValue: 't',
+          resolved: false,
+          actionId: 'action-1',
+        }]}
+      />,
+    )
+    expect(screen.getByText('Unit of measure not found in the units dictionary: t')).toBeInTheDocument()
   })
 })

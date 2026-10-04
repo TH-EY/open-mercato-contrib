@@ -36,11 +36,16 @@ export function useDiscrepancyDescriptions(): (description: string, foundValue?:
     'inbox_ops.discrepancy.desc.no_matching_contact': t('inbox_ops.discrepancy.desc.no_matching_contact', 'No matching contact found'),
     'inbox_ops.discrepancy.desc.draft_reply_no_contact': t('inbox_ops.discrepancy.desc.draft_reply_no_contact', 'Draft reply target has no matching contact. Create the contact first.'),
     'inbox_ops.discrepancy.desc.duplicate_order_reference': t('inbox_ops.discrepancy.desc.duplicate_order_reference', 'An order with this customer reference already exists'),
+    'inbox_ops.discrepancy.desc.unit_not_recognized': t('inbox_ops.discrepancy.desc.unit_not_recognized', 'Unit of measure not found in the units dictionary'),
   }
   return (description: string, foundValue?: string | null) => {
     const translated = translations[description]
     if (!translated) return description
-    if (foundValue && (description === 'inbox_ops.discrepancy.desc.product_not_matched' || description === 'inbox_ops.discrepancy.desc.no_matching_contact')) {
+    if (foundValue && (
+      description === 'inbox_ops.discrepancy.desc.product_not_matched'
+      || description === 'inbox_ops.discrepancy.desc.no_matching_contact'
+      || description === 'inbox_ops.discrepancy.desc.unit_not_recognized'
+    )) {
       return `${translated}: ${foundValue}`
     }
     return translated
@@ -102,10 +107,14 @@ export function useActionTypeLabels(): Record<string, string> {
   }
 }
 
+function confidenceTextClass(value: number): string {
+  return value >= 0.8 ? 'text-status-success-text' : value >= 0.6 ? 'text-status-warning-text' : 'text-status-error-text'
+}
+
 export function ConfidenceBadge({ value }: { value: string }) {
   const num = parseFloat(value)
   const pct = Math.round(num * 100)
-  const color = num >= 0.8 ? 'text-status-success-text' : num >= 0.6 ? 'text-status-warning-text' : 'text-status-error-text'
+  const color = confidenceTextClass(num)
   const bgColor = num >= 0.8 ? 'bg-status-success-icon' : num >= 0.6 ? 'bg-status-warning-icon' : 'bg-status-error-icon'
   const width = Math.round(num * 100)
   return (
@@ -125,6 +134,7 @@ function OrderPreview({ payload }: { payload: Record<string, unknown> }) {
   const currencyCode = (payload.currencyCode as string) || ''
   const notes = (payload.notes as string) || ''
   const deliveryDate = (payload.requestedDeliveryDate as string) || ''
+  const showLineConfidence = lineItems.some((item) => typeof item.confidence === 'number')
 
   return (
     <div className="mt-2 space-y-2 text-xs">
@@ -143,14 +153,27 @@ function OrderPreview({ payload }: { payload: Record<string, unknown> }) {
                 <th className="text-left px-2 py-1 font-medium">{t('inbox_ops.preview.product', 'Product')}</th>
                 <th className="text-right px-2 py-1 font-medium">{t('inbox_ops.preview.qty', 'Qty')}</th>
                 <th className="text-right px-2 py-1 font-medium">{t('inbox_ops.preview.price', 'Price')}</th>
+                {showLineConfidence && (
+                  <th className="text-right px-2 py-1 font-medium">{t('inbox_ops.confidence', 'Confidence')}</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {lineItems.map((item, index) => (
                 <tr key={index} className="border-t">
                   <td className="px-2 py-1">{(item.productName as string) || '—'}</td>
-                  <td className="px-2 py-1 text-right">{String(item.quantity ?? '')}</td>
+                  <td className="px-2 py-1 text-right">
+                    {String(item.quantity ?? '')}
+                    {typeof item.quantityUnit === 'string' && item.quantityUnit ? ` ${item.quantityUnit}` : ''}
+                  </td>
                   <td className="px-2 py-1 text-right">{item.unitPrice ? `${item.unitPrice} ${currencyCode}` : '—'}</td>
+                  {showLineConfidence && (
+                    <td className="px-2 py-1 text-right">
+                      {typeof item.confidence === 'number'
+                        ? <span className={confidenceTextClass(item.confidence)}>{Math.round(item.confidence * 100)}%</span>
+                        : '—'}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
