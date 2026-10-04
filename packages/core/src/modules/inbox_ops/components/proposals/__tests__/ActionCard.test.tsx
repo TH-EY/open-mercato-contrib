@@ -112,6 +112,14 @@ describe('ActionCard order preview line units and confidence', () => {
     expect(screen.getByText('45%')).toHaveClass('text-status-error-text')
   })
 
+  it('hides a line confidence outside the 0-1 range', () => {
+    renderCard(makeAction({
+      payload: { customerName: 'Acme', currencyCode: 'EUR', lineItems: [{ productName: 'Widget', quantity: '5', confidence: 90 }] },
+    }))
+    expect(screen.queryByText('9000%')).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: 'Confidence' })).not.toBeInTheDocument()
+  })
+
   it('keeps the preview of a payload without units or line confidence unchanged', () => {
     renderCard(makeAction({
       payload: { customerName: 'Acme', currencyCode: 'EUR', lineItems: [{ productName: 'Widget', quantity: '5' }] },
@@ -152,6 +160,7 @@ describe('ActionCard unit discrepancy', () => {
         }]}
       />,
     )
-    expect(screen.getByText('Unit of measure not found in the units dictionary: t')).toBeInTheDocument()
+    expect(screen.getByText('Unit of measure not found in the units dictionary')).toBeInTheDocument()
+    expect(screen.getByText(/Found: t$/)).toBeInTheDocument()
   })
 })

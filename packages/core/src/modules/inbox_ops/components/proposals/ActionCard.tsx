@@ -41,11 +41,7 @@ export function useDiscrepancyDescriptions(): (description: string, foundValue?:
   return (description: string, foundValue?: string | null) => {
     const translated = translations[description]
     if (!translated) return description
-    if (foundValue && (
-      description === 'inbox_ops.discrepancy.desc.product_not_matched'
-      || description === 'inbox_ops.discrepancy.desc.no_matching_contact'
-      || description === 'inbox_ops.discrepancy.desc.unit_not_recognized'
-    )) {
+    if (foundValue && (description === 'inbox_ops.discrepancy.desc.product_not_matched' || description === 'inbox_ops.discrepancy.desc.no_matching_contact')) {
       return `${translated}: ${foundValue}`
     }
     return translated
@@ -111,6 +107,10 @@ function confidenceTextClass(value: number): string {
   return value >= 0.8 ? 'text-status-success-text' : value >= 0.6 ? 'text-status-warning-text' : 'text-status-error-text'
 }
 
+function readLineConfidence(value: unknown): number | null {
+  return typeof value === 'number' && value >= 0 && value <= 1 ? value : null
+}
+
 export function ConfidenceBadge({ value }: { value: string }) {
   const num = parseFloat(value)
   const pct = Math.round(num * 100)
@@ -134,7 +134,7 @@ function OrderPreview({ payload }: { payload: Record<string, unknown> }) {
   const currencyCode = (payload.currencyCode as string) || ''
   const notes = (payload.notes as string) || ''
   const deliveryDate = (payload.requestedDeliveryDate as string) || ''
-  const showLineConfidence = lineItems.some((item) => typeof item.confidence === 'number')
+  const showLineConfidence = lineItems.some((item) => readLineConfidence(item.confidence) !== null)
 
   return (
     <div className="mt-2 space-y-2 text-xs">
@@ -159,23 +159,26 @@ function OrderPreview({ payload }: { payload: Record<string, unknown> }) {
               </tr>
             </thead>
             <tbody>
-              {lineItems.map((item, index) => (
-                <tr key={index} className="border-t">
-                  <td className="px-2 py-1">{(item.productName as string) || '—'}</td>
-                  <td className="px-2 py-1 text-right">
-                    {String(item.quantity ?? '')}
-                    {typeof item.quantityUnit === 'string' && item.quantityUnit ? ` ${item.quantityUnit}` : ''}
-                  </td>
-                  <td className="px-2 py-1 text-right">{item.unitPrice ? `${item.unitPrice} ${currencyCode}` : '—'}</td>
-                  {showLineConfidence && (
+              {lineItems.map((item, index) => {
+                const confidence = readLineConfidence(item.confidence)
+                return (
+                  <tr key={index} className="border-t">
+                    <td className="px-2 py-1">{(item.productName as string) || '—'}</td>
                     <td className="px-2 py-1 text-right">
-                      {typeof item.confidence === 'number'
-                        ? <span className={confidenceTextClass(item.confidence)}>{Math.round(item.confidence * 100)}%</span>
-                        : '—'}
+                      {String(item.quantity ?? '')}
+                      {typeof item.quantityUnit === 'string' && item.quantityUnit ? ` ${item.quantityUnit}` : ''}
                     </td>
-                  )}
-                </tr>
-              ))}
+                    <td className="px-2 py-1 text-right">{item.unitPrice ? `${item.unitPrice} ${currencyCode}` : '—'}</td>
+                    {showLineConfidence && (
+                      <td className="px-2 py-1 text-right">
+                        {confidence === null
+                          ? '—'
+                          : <span className={confidenceTextClass(confidence)}>{Math.round(confidence * 100)}%</span>}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
