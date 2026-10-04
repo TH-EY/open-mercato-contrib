@@ -10,7 +10,7 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 ## Scope
 
 - `inbox_ops/data/validators.ts` — `orderPayloadSchema.lineItems[]` gains optional `quantityUnit` (string, max 25, like `sales` `linePricingSchema.quantityUnit`) and optional `confidence` (number in [0, 1]).
-- `sales/inbox-actions.ts` — prompt schema and rules for both fields; `executeCreateDocumentAction` forwards `quantityUnit` to the sales line after checking it against the line's catalog product.
+- `sales/inbox-actions.ts` — prompt schema and rules for both fields; `executeCreateDocumentAction` forwards `quantityUnit` to the sales line, leaves it off when the line's product has no base unit, and turns the sales `uom.*` errors into a readable 400.
 - `inbox_ops/lib/unitLookup.ts` (new) — reads the tenant's unit dictionary (`Dictionary` / `DictionaryEntry` resolved from DI, keys `unit` / `units` / `measurement_units`) and matches a unit against it.
 - `inbox_ops/lib/extractionPrompt.ts` — optional appended `units` parameter rendered as a units-of-measure section.
 - `inbox_ops/subscribers/extractionWorker.ts` — loads units, normalizes each line's unit (canonical code when recognized, as written otherwise, `unit` alias) and confidence (numeric strings coerced, invalid dropped), raises a `quantity_mismatch` discrepancy for an unrecognized unit.
@@ -21,7 +21,6 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 - Auto-accepting actions above a confidence threshold — this change only stores and shows the signal.
 - Re-evaluating the `unit_not_recognized` discrepancy after the unit dictionary or the action payload changes — discrepancies are not re-checked after extraction anywhere in `inbox_ops`; "Edit" (the sales document form) remains the way past it.
-- Special handling of sales errors for custom lines: an unrecognized unit that reaches accept through the API fails with the sales error, like every other sales validation error raised by an inbox action.
 - Carrying the unit into the "Edit" path (the prefilled sales document form): the form cannot check a unit against the product's base unit and conversions on the client, and an unchecked unit would turn a save that works today into a `uom.*` error. Units there are chosen in the line dialog from the product's own units, as before.
 - Checking the unit against the matched product's base unit and conversions at extraction time — it is checked on accept, where the line's product is final (it can change after extraction, e.g. through `create_product`).
 - Units in `update_order.quantityChanges` and in auto-generated `create_product` actions; converting quantities between units; seeding new units.
@@ -33,13 +32,13 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 - `quantityUnit` holds the canonical dictionary code (`canonicalizeUnitCode` from `@open-mercato/shared/lib/units/unitCodes`) when the unit is recognized; an unrecognized unit is kept as written, so the reviewer sees what the email said, and gets a `quantity_mismatch` discrepancy with severity `error` (accepting it would fail with `uom.unit_not_found`) and description key `inbox_ops.discrepancy.desc.unit_not_recognized`.
 - When the unit dictionary cannot be read (dictionary entities not resolvable, query failure), units are kept as written and no unit discrepancy is raised. A tenant without units of measure (no unit dictionary, or one without entries) gets no line units at all and no discrepancy — `sales` would reject any unit there, and before this change units were dropped anyway.
 - Invalid per-line confidence never blocks acceptance: the worker drops it before storing, and the schema reads an invalid stored value as absent, so payloads stored before this change keep validating. A blank unit is read as absent; a unit longer than 25 characters is not stored (the worker flags it) and is rejected on edit.
-- On accept, a line with a catalog product passes its unit only when sales can store it for that product: the product's base unit or a unit with an active conversion is forwarded; for a product without a base unit the unit is left off (sales cannot store a unit there, and before this change no unit was sent); any other unit fails the action with a 400 that names the line, instead of a raw `uom.*` code. Custom lines forward the unit and sales validates it against the dictionary.
+- On accept, the sales commands stay the single place that validates and normalizes units (`normalizeLineUom`): the inbox action forwards the unit and only leaves it off for a line whose product has no base unit (sales cannot store a unit there, and before this change no unit was sent). The product's base unit is read through the DI-registered `CatalogProduct` class (`resolveEntityClass`), so `sales` gains no new import from `catalog` (#2113). A sales `uom.*` error raised while creating the document is returned as a 400 with a readable message that keeps the code; it cannot name the line, because the sales error does not.
 - The unit lookup reads every dictionary entry (sales matches against all of them); only the prompt list is capped, at 200 units.
 
 ## Risks
 
 - A stored payload whose lines already carry `quantityUnit` / `confidence` with a different shape would fail validation on accept. No prompt has asked for these keys before, so this is not expected in practice.
-- Lines with a unit that the line's product cannot convert from now fail on accept instead of silently using the product's default unit — intended; the execution error names the line and the product's base unit.
+- Lines with a unit that the line's product cannot convert from now fail on accept instead of silently using the product's default unit — intended; the execution error explains the cause and keeps the sales code.
 
 ## Progress
 
@@ -82,3 +81,4 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 - [x] 6.6 Cover catalog line units and unit conversion in `TC-INBOX-011` — 602bb109a
 - [x] 6.7 Leave inbox line units out of the sales document form prefill (supersedes 3.2) — 039e6fa88
 - [x] 6.8 Leave line units off for tenants without units of measure — 202d9ef30
+- [x] 6.9 Read the product base unit through DI and let sales validate units, with readable `uom.*` errors — e7e5dab1c
