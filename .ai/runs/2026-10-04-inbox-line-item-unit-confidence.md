@@ -59,8 +59,8 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 ### Phase 4: Docs and integration coverage
 
-- [ ] 4.1 Update `SPEC-037` §8 and its changelog
-- [ ] 4.2 Add integration test `TC-INBOX-011` accepting an order action with a unit
+- [x] 4.1 Update `SPEC-037` §8 and its changelog — f200d8f0e
+- [x] 4.2 Add integration test `TC-INBOX-011` accepting an order action with a unit — 9d7690046
 
 ### Phase 5: Validation
 
