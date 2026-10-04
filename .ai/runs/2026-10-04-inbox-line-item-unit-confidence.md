@@ -43,8 +43,8 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 ### Phase 1: Payload contract and execution
 
-- [ ] 1.1 Add optional `quantityUnit` and `confidence` to `orderPayloadSchema` line items, with validator tests
-- [ ] 1.2 Describe both fields in the `create_order` prompt schema and rules and forward `quantityUnit` to sales lines, with execution tests
+- [x] 1.1 Add optional `quantityUnit` and `confidence` to `orderPayloadSchema` line items, with validator tests — fe2641399
+- [x] 1.2 Describe both fields in the `create_order` prompt schema and rules and forward `quantityUnit` to sales lines, with execution tests — 10f476fcc
 
 ### Phase 2: Extraction
 
