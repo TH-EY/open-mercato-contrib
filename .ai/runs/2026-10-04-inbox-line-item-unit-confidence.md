@@ -10,18 +10,18 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 ## Scope
 
 - `inbox_ops/data/validators.ts` — `orderPayloadSchema.lineItems[]` gains optional `quantityUnit` (string, max 25, like `sales` `linePricingSchema.quantityUnit`) and optional `confidence` (number in [0, 1]).
-- `sales/inbox-actions.ts` — prompt schema and rules for both fields; `executeCreateDocumentAction` forwards `quantityUnit` to the sales line.
+- `sales/inbox-actions.ts` — prompt schema and rules for both fields; `executeCreateDocumentAction` forwards `quantityUnit` to the sales line after checking it against the line's catalog product.
 - `inbox_ops/lib/unitLookup.ts` (new) — reads the tenant's unit dictionary (`Dictionary` / `DictionaryEntry` resolved from DI, keys `unit` / `units` / `measurement_units`) and matches a unit against it.
 - `inbox_ops/lib/extractionPrompt.ts` — optional appended `units` parameter rendered as a units-of-measure section.
 - `inbox_ops/subscribers/extractionWorker.ts` — loads units, normalizes each line's unit (canonical code when recognized, as written otherwise, `unit` alias) and confidence (numeric strings coerced, invalid dropped), raises a `quantity_mismatch` discrepancy for an unrecognized unit.
 - `inbox_ops/components/proposals/ActionCard.tsx` — unit after the quantity, per-line confidence column, discrepancy description; i18n in all five `inbox_ops` locales.
-- Edit path — `sales/components/documents/SalesDocumentForm.tsx` inbox prefill and the quote-line POST in `sales/backend/sales/documents/create/page.tsx` keep the unit.
+- Edit path — `sales/components/documents/SalesDocumentForm.tsx` inbox prefill and the quote-line POST in `sales/backend/sales/documents/create/page.tsx` keep the unit; a quote line whose unit is rejected is added without it, with a warning.
 - `SPEC-037` §8 snippet and changelog; unit tests per step; integration test `TC-INBOX-011`.
 
 ## Non-goals
 
 - Auto-accepting actions above a confidence threshold — this change only stores and shows the signal.
-- Checking the unit against the matched product's base unit and conversions at extraction time — the sales command already enforces it on accept (`uom.conversion_not_found`).
+- Checking the unit against the matched product's base unit and conversions at extraction time — it is checked on accept, where the line's product is final (it can change after extraction, e.g. through `create_product`).
 - Units in `update_order.quantityChanges` and in auto-generated `create_product` actions; converting quantities between units; seeding new units.
 - Any change to `extractionOutputSchema` (the provider-side schema) — line items travel inside the `payloadJson` string.
 - DB migrations — sales lines already have `quantity_unit` / `normalized_unit`.
@@ -30,12 +30,14 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 - `quantityUnit` holds the canonical dictionary code (`canonicalizeUnitCode` from `@open-mercato/shared/lib/units/unitCodes`) when the unit is recognized; an unrecognized unit is kept as written, so the reviewer sees what the email said, and gets a `quantity_mismatch` discrepancy with severity `error` (accepting it would fail with `uom.unit_not_found`) and description key `inbox_ops.discrepancy.desc.unit_not_recognized`.
 - When the unit dictionary cannot be read (dictionary entities not resolvable, query failure), units are kept as written and no unit discrepancy is raised; a tenant without a unit dictionary is treated as having no units, matching `sales`.
-- Invalid per-line confidence never blocks acceptance: the worker drops it before storing; the schema stays strict for edited payloads.
+- Invalid per-line confidence never blocks acceptance: the worker drops it before storing, and the schema reads an invalid stored value as absent, so payloads stored before this change keep validating. A blank unit is read as absent; a unit longer than 25 characters is not stored (the worker flags it) and is rejected on edit.
+- On accept, a line with a catalog product passes its unit only when sales can store it for that product: the product's base unit or a unit with an active conversion is forwarded; for a product without a base unit the unit is left off (sales cannot store a unit there, and before this change no unit was sent); any other unit fails the action with a 400 that names the line, instead of a raw `uom.*` code. Custom lines forward the unit and sales validates it against the dictionary.
+- The unit lookup reads every dictionary entry (sales matches against all of them); only the prompt list is capped, at 200 units.
 
 ## Risks
 
 - A stored payload whose lines already carry `quantityUnit` / `confidence` with a different shape would fail validation on accept. No prompt has asked for these keys before, so this is not expected in practice.
-- Lines with a recognized unit that the matched product cannot convert from now fail on accept with the sales error instead of silently using the product's default unit — intended, and visible as the action's execution error.
+- Lines with a unit that the line's product cannot convert from now fail on accept instead of silently using the product's default unit — intended; the execution error names the line and the product's base unit.
 
 ## Progress
 
@@ -65,3 +67,12 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 ### Phase 5: Validation
 
 - [ ] 5.1 Run the full validation gate
+
+### Phase 6: Review follow-ups
+
+- [x] 6.1 Check line units against the line's product on accept — d9cd59b0d
+- [x] 6.2 Keep inbox quote lines whose unit is rejected, with a warning — 4cfb88c05
+- [x] 6.3 Tolerate stored line confidence values and over-long units — b0b4b4af3
+- [x] 6.4 Read every tenant unit and bound the prompt unit list — 8be505ba9
+- [x] 6.5 Show the unit discrepancy once and ignore out-of-range line confidence — d3c670f22
+- [x] 6.6 Cover catalog line units and unit conversion in `TC-INBOX-011` — 602bb109a
