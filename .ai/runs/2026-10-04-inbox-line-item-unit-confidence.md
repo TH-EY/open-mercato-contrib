@@ -48,9 +48,9 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 ### Phase 2: Extraction
 
-- [ ] 2.1 Add `lib/unitLookup.ts` reading the tenant unit dictionary, with unit tests
-- [ ] 2.2 Render tenant units in the extraction system prompt, with prompt tests
-- [ ] 2.3 Normalize line units and confidence in the extraction worker and flag unrecognized units, with worker tests
+- [x] 2.1 Add `lib/unitLookup.ts` reading the tenant unit dictionary, with unit tests — d4362c8a1
+- [x] 2.2 Render tenant units in the extraction system prompt, with prompt tests — 36a2038a1
+- [x] 2.3 Normalize line units and confidence in the extraction worker and flag unrecognized units, with worker tests — 706fdcde7
 
 ### Phase 3: Proposal UI and edit path
 
