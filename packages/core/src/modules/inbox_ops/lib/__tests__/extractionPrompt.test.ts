@@ -99,6 +99,13 @@ describe('buildExtractionSystemPrompt', () => {
     expect(result).toContain('{"code":"m2","label":"Square Meter (area)"}')
   })
 
+  it('caps the unit list rendered into the prompt', async () => {
+    const units = Array.from({ length: 205 }, (_, index) => ({ code: `u${index}`, label: `Unit ${index}` }))
+    const result = await buildExtractionSystemPrompt([], [], undefined, undefined, mockActions, units)
+    expect(result).toContain('{"code":"u199","label":"Unit 199"}')
+    expect(result).not.toContain('{"code":"u200","label":"Unit 200"}')
+  })
+
   it.each([
     ['empty', []],
     ['unavailable', null],

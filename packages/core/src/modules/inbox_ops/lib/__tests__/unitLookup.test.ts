@@ -71,16 +71,18 @@ describe('fetchUnitsForExtraction', () => {
     expect(mockFindWithDecryption).not.toHaveBeenCalled()
   })
 
-  it('maps entries to codes and labels, skipping blank and duplicate entries', async () => {
+  it('maps entries to codes and labels in position and code order, skipping blank and duplicate entries', async () => {
     mockFindOneWithDecryption.mockResolvedValueOnce(dictionary)
     mockFindWithDecryption.mockResolvedValueOnce([
-      { value: 'kg', normalizedValue: 'kg', label: 'Kilogram (weight)' },
-      { value: 'M2', normalizedValue: 'm2', label: '' },
-      { value: '  ', normalizedValue: '', label: 'Blank' },
-      { value: 'KG', normalizedValue: 'kg', label: 'Duplicate kilogram' },
+      { value: 'kg', normalizedValue: 'kg', label: 'Kilogram (weight)', position: 0 },
+      { value: 'M2', normalizedValue: 'm2', label: '', position: 0 },
+      { value: '  ', normalizedValue: '', label: 'Blank', position: 0 },
+      { value: 'KG', normalizedValue: 'kg', label: 'Duplicate kilogram', position: 1 },
+      { value: 'box', normalizedValue: 'box', label: 'Box (piece)', position: -1 },
     ])
 
     expect(await fetchUnitsForExtraction(mockEm, scope, deps)).toEqual([
+      { code: 'box', normalizedCode: 'box', label: 'Box (piece)' },
       { code: 'kg', normalizedCode: 'kg', label: 'Kilogram (weight)' },
       { code: 'M2', normalizedCode: 'm2', label: 'M2' },
     ])

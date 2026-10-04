@@ -2,6 +2,7 @@ import type { ContactMatchResult } from './contactMatcher'
 import type { InboxActionDefinition } from '@open-mercato/shared/modules/inbox-actions'
 
 const LANGUAGE_NAMES: Record<string, string> = { en: 'English', de: 'German', es: 'Spanish', pl: 'Polish' }
+const MAX_PROMPT_UNITS = 200
 
 /**
  * Lazily load registered inbox action definitions from the generated registry.
@@ -67,7 +68,7 @@ export async function buildExtractionSystemPrompt(
     : '\nNo catalog products available for matching.'
 
   const unitsSection = units && units.length > 0
-    ? `\nUnits of measure (code and label):\n${JSON.stringify(units.map((unit) => ({ code: unit.code, label: unit.label })))}`
+    ? `\nUnits of measure (code and label):\n${JSON.stringify(units.slice(0, MAX_PROMPT_UNITS).map((unit) => ({ code: unit.code, label: unit.label })))}`
     : '\nNo units of measure configured.'
 
   const channelSection = channelId

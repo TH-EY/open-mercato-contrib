@@ -39,7 +39,6 @@ interface UnitLookupDeps {
 }
 
 const UNIT_DICTIONARY_KEYS = ['unit', 'units', 'measurement_units']
-const MAX_UNITS = 200
 
 /**
  * Reads the tenant's unit-of-measure dictionary — the same dictionary the sales
@@ -77,13 +76,16 @@ export async function fetchUnitsForExtraction(
         organizationId: dictionary.organizationId,
         tenantId: dictionary.tenantId,
       },
-      { orderBy: { position: 'ASC' }, limit: MAX_UNITS },
+      undefined,
       scope,
     )
 
+    const sortedEntries = [...entries].sort((left, right) =>
+      (left.position ?? 0) - (right.position ?? 0) || String(left.value).localeCompare(String(right.value)),
+    )
     const units: ExtractionUnit[] = []
     const seen = new Set<string>()
-    for (const entry of entries) {
+    for (const entry of sortedEntries) {
       const code = typeof entry.value === 'string' ? entry.value.trim() : ''
       if (!code) continue
       const normalizedCode = typeof entry.normalizedValue === 'string' && entry.normalizedValue.trim()
