@@ -15,12 +15,12 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 - `inbox_ops/lib/extractionPrompt.ts` — optional appended `units` parameter rendered as a units-of-measure section.
 - `inbox_ops/subscribers/extractionWorker.ts` — loads units, normalizes each line's unit (canonical code when recognized, as written otherwise, `unit` alias) and confidence (numeric strings coerced, invalid dropped), raises a `quantity_mismatch` discrepancy for an unrecognized unit.
 - `inbox_ops/components/proposals/ActionCard.tsx` — unit after the quantity, per-line confidence column, discrepancy description; i18n in all five `inbox_ops` locales.
-- Edit path — `sales/components/documents/SalesDocumentForm.tsx` inbox prefill and the quote-line POST in `sales/backend/sales/documents/create/page.tsx` keep the unit; a quote line whose unit is rejected is added without it, with a warning.
 - `SPEC-037` §8 snippet and changelog; unit tests per step; integration test `TC-INBOX-011`.
 
 ## Non-goals
 
 - Auto-accepting actions above a confidence threshold — this change only stores and shows the signal.
+- Carrying the unit into the "Edit" path (the prefilled sales document form): the form cannot check a unit against the product's base unit and conversions on the client, and an unchecked unit would turn a save that works today into a `uom.*` error. Units there are chosen in the line dialog from the product's own units, as before.
 - Checking the unit against the matched product's base unit and conversions at extraction time — it is checked on accept, where the line's product is final (it can change after extraction, e.g. through `create_product`).
 - Units in `update_order.quantityChanges` and in auto-generated `create_product` actions; converting quantities between units; seeding new units.
 - Any change to `extractionOutputSchema` (the provider-side schema) — line items travel inside the `payloadJson` string.
@@ -76,3 +76,4 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 - [x] 6.4 Read every tenant unit and bound the prompt unit list — 8be505ba9
 - [x] 6.5 Show the unit discrepancy once and ignore out-of-range line confidence — d3c670f22
 - [x] 6.6 Cover catalog line units and unit conversion in `TC-INBOX-011` — 602bb109a
+- [x] 6.7 Leave inbox line units out of the sales document form prefill (supersedes 3.2) — 039e6fa88
