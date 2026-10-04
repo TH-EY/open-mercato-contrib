@@ -1,4 +1,7 @@
 import type { InboxActionDefinition, InboxActionExecutionContext } from '@open-mercato/shared/modules/inbox-actions'
+import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
+import { toUnitLookupKey } from '@open-mercato/shared/lib/units/unitCodes'
+import { CatalogProduct, CatalogProductUnitConversion } from '../catalog/data/entities'
 import { orderPayloadSchema, updateOrderPayloadSchema, updateShipmentPayloadSchema } from '../inbox_ops/data/validators'
 import type { OrderPayload, UpdateOrderPayload, UpdateShipmentPayload } from '../inbox_ops/data/validators'
 import {
@@ -18,6 +21,76 @@ import {
   loadOrderLineItems,
   matchLineItemByName,
 } from '../inbox_ops/lib/executionHelpers'
+import type { ExecutionHelperContext } from '../inbox_ops/lib/executionHelpers'
+
+type OrderLineItem = OrderPayload['lineItems'][number]
+
+type ProductUnitRules = {
+  baseUnit: string | null
+  convertibleUnits: Set<string>
+}
+
+function readEntityRefId(value: unknown): string | null {
+  if (typeof value === 'string') return value
+  if (value && typeof value === 'object' && typeof (value as { id?: unknown }).id === 'string') {
+    return (value as { id: string }).id
+  }
+  return null
+}
+
+async function loadProductUnitRules(
+  hCtx: ExecutionHelperContext,
+  lines: OrderLineItem[],
+): Promise<Map<string, ProductUnitRules>> {
+  const rules = new Map<string, ProductUnitRules>()
+  const productIds = Array.from(new Set(
+    lines
+      .filter((line) => line.productId && line.quantityUnit)
+      .map((line) => line.productId as string),
+  ))
+  if (productIds.length === 0) return rules
+
+  const scope = { tenantId: hCtx.tenantId, organizationId: hCtx.organizationId }
+  const products = await findWithDecryption(
+    hCtx.em,
+    CatalogProduct,
+    { id: { $in: productIds }, ...scope, deletedAt: null },
+    undefined,
+    scope,
+  )
+  for (const product of products) {
+    rules.set(product.id, { baseUnit: toUnitLookupKey(product.defaultUnit), convertibleUnits: new Set() })
+  }
+
+  const conversions = await findWithDecryption(
+    hCtx.em,
+    CatalogProductUnitConversion,
+    { product: { $in: productIds }, ...scope, deletedAt: null, isActive: true },
+    undefined,
+    scope,
+  )
+  for (const conversion of conversions) {
+    const productRules = rules.get(readEntityRefId(conversion.product) ?? '')
+    const unitKey = toUnitLookupKey(conversion.unitCode)
+    if (productRules && unitKey) productRules.convertibleUnits.add(unitKey)
+  }
+  return rules
+}
+
+function resolveSalesLineUnit(line: OrderLineItem, rules: Map<string, ProductUnitRules>): string | undefined {
+  if (!line.quantityUnit) return undefined
+  const productRules = line.productId ? rules.get(line.productId) : undefined
+  if (!productRules) return line.quantityUnit
+  if (!productRules.baseUnit) return undefined
+  const unitKey = toUnitLookupKey(line.quantityUnit)
+  if (unitKey === productRules.baseUnit || (unitKey && productRules.convertibleUnits.has(unitKey))) {
+    return line.quantityUnit
+  }
+  throw new ExecutionError(
+    `Unit "${line.quantityUnit}" of line "${line.productName}" has no conversion to the product's base unit "${productRules.baseUnit}". Add a unit conversion to the product or change the line unit.`,
+    400,
+  )
+}
 
 // ---------------------------------------------------------------------------
 // create_order
@@ -40,6 +113,7 @@ async function executeCreateDocumentAction(
   }
 
   const currencyCode = payload.currencyCode.trim().toUpperCase()
+  const productUnitRules = await loadProductUnitRules(hCtx, payload.lineItems)
   const lines = payload.lineItems.map((line, index) => {
     const quantity = parseNumberToken(line.quantity, `lineItems[${index}].quantity`)
     const unitPrice = line.unitPrice
@@ -57,7 +131,8 @@ async function executeCreateDocumentAction(
 
     if (line.productId) mappedLine.productId = line.productId
     if (line.variantId) mappedLine.productVariantId = line.variantId
-    if (line.quantityUnit) mappedLine.quantityUnit = line.quantityUnit
+    const quantityUnit = resolveSalesLineUnit(line, productUnitRules)
+    if (quantityUnit) mappedLine.quantityUnit = quantityUnit
     if (unitPrice !== undefined) mappedLine.unitPriceNet = unitPrice
     if (line.sku || line.catalogPrice) {
       mappedLine.catalogSnapshot = {

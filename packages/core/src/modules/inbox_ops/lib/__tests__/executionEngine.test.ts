@@ -612,6 +612,90 @@ describe('executionEngine', () => {
       expect(lines[1]).not.toHaveProperty('quantityUnit')
     })
 
+    describe('lines with a catalog product', () => {
+      const productWithUnits = '123e4567-e89b-4d56-a456-426614174101'
+      const productWithoutUnits = '123e4567-e89b-4d56-a456-426614174102'
+
+      function productPayload(lineItems: Record<string, unknown>[]) {
+        return { customerName: 'Acme Corp', channelId: VALID_UUID, currencyCode: 'EUR', lineItems }
+      }
+
+      function mockCatalog() {
+        mockFindWithDecryption.mockImplementation(async (_em: unknown, entity: { name?: string }) => {
+          if (entity?.name === 'CatalogProduct') {
+            return [
+              { id: productWithUnits, defaultUnit: 'BAG' },
+              { id: productWithoutUnits, defaultUnit: null },
+            ]
+          }
+          if (entity?.name === 'CatalogProductUnitConversion') {
+            return [{ product: { id: productWithUnits }, unitCode: 't' }]
+          }
+          return []
+        })
+      }
+
+      async function executeWithLines(lineItems: Record<string, unknown>[]) {
+        const em = createMockEm()
+        em.nativeUpdate.mockResolvedValue(1)
+        const payload = productPayload(lineItems)
+        mockFindOneWithDecryption.mockResolvedValueOnce(makeAction({ id: 'a-product-units', status: 'processing', payload }))
+        mockCommandBus.execute.mockResolvedValue({ result: { orderId: 'order-product-units' } })
+        return executeAction(makeAction({ id: 'a-product-units', payload }), makeCtx(em))
+      }
+
+      it('forwards the base unit and units the product converts from', async () => {
+        mockCatalog()
+        const result = await executeWithLines([
+          { productName: 'Cement', productId: productWithUnits, quantity: '10', quantityUnit: 'bag' },
+          { productName: 'Cement', productId: productWithUnits, quantity: '2', quantityUnit: 't' },
+        ])
+
+        expect(result.success).toBe(true)
+        const lines = findCommandInput('sales.orders.create').lines as Record<string, unknown>[]
+        expect(lines.map((line) => line.quantityUnit)).toEqual(['bag', 't'])
+      })
+
+      it('leaves the unit off lines whose product has no base unit', async () => {
+        mockCatalog()
+        const result = await executeWithLines([
+          { productName: 'Sand', productId: productWithoutUnits, quantity: '3', quantityUnit: 'kg' },
+        ])
+
+        expect(result.success).toBe(true)
+        const lines = findCommandInput('sales.orders.create').lines as Record<string, unknown>[]
+        expect(lines[0]).not.toHaveProperty('quantityUnit')
+      })
+
+      it('fails with a 400 naming the line when the product cannot convert from the unit', async () => {
+        mockCatalog()
+        const result = await executeWithLines([
+          { productName: 'Cement', productId: productWithUnits, quantity: '40', quantityUnit: 'm2' },
+        ])
+
+        expect(result.success).toBe(false)
+        expect(result.statusCode).toBe(400)
+        expect(result.error).toContain('Unit "m2" of line "Cement"')
+        expect(mockCommandBus.execute).not.toHaveBeenCalledWith('sales.orders.create', expect.anything())
+      })
+
+      it('queries products and conversions within the tenant and organization', async () => {
+        mockCatalog()
+        await executeWithLines([
+          { productName: 'Cement', productId: productWithUnits, quantity: '10', quantityUnit: 'bag' },
+        ])
+
+        const catalogCalls = mockFindWithDecryption.mock.calls.filter(([, entity]) =>
+          ['CatalogProduct', 'CatalogProductUnitConversion'].includes((entity as { name?: string })?.name ?? ''),
+        )
+        expect(catalogCalls).toHaveLength(2)
+        for (const [, , where, , scope] of catalogCalls) {
+          expect(where).toEqual(expect.objectContaining({ tenantId: 'tenant-1', organizationId: 'org-1', deletedAt: null }))
+          expect(scope).toEqual({ tenantId: 'tenant-1', organizationId: 'org-1' })
+        }
+      })
+    })
+
     it('forwards the line unit to sales.quotes.create', async () => {
       const em = createMockEm()
       em.nativeUpdate.mockResolvedValue(1)
