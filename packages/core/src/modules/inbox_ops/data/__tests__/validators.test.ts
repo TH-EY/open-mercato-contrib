@@ -72,6 +72,38 @@ describe('orderPayloadSchema', () => {
     const result = orderPayloadSchema.safeParse({ ...validPayload, currencyCode: 'US' })
     expect(result.success).toBe(false)
   })
+
+  it('accepts a line unit and line confidence and keeps them in the parsed payload', () => {
+    const result = orderPayloadSchema.safeParse({
+      ...validPayload,
+      lineItems: [{ productName: 'Cement', quantity: '10', quantityUnit: ' kg ', confidence: 0.75 }],
+    })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.lineItems[0].quantityUnit).toBe('kg')
+    expect(result.data.lineItems[0].confidence).toBe(0.75)
+  })
+
+  it('parses a line without unit or confidence exactly as before', () => {
+    const result = orderPayloadSchema.safeParse(validPayload)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.lineItems[0]).toEqual({ productName: 'Widget A', quantity: '10', kind: 'product' })
+  })
+
+  it.each([
+    ['an empty unit', { quantityUnit: '  ' }],
+    ['a unit longer than 25 characters', { quantityUnit: 'x'.repeat(26) }],
+    ['a confidence above 1', { confidence: 1.5 }],
+    ['a negative confidence', { confidence: -0.1 }],
+    ['a non-numeric confidence', { confidence: 'high' }],
+  ])('rejects a line with %s', (_label, line) => {
+    const result = orderPayloadSchema.safeParse({
+      ...validPayload,
+      lineItems: [{ productName: 'A', quantity: '1', ...line }],
+    })
+    expect(result.success).toBe(false)
+  })
 })
 
 describe('updateOrderPayloadSchema', () => {
