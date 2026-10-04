@@ -66,7 +66,9 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 ### Phase 5: Validation
 
-- [ ] 5.1 Run the full validation gate
+- [x] 5.1 Run the full validation gate — gate run at bee3a167a
+
+  Local runner (no compose `app` container). `build:packages`, `generate`, `build:packages`, `i18n:check-sync`, `i18n:check-usage`, `typecheck`, `build:app` green; `test` (run with `--continue`) green in every package except one `@open-mercato/cli` test — `module-package-sources.test.ts` compares `mtimeMs` with `toBe` and fails deterministically on macOS/APFS (`…713.999` vs `…714`). The branch does not touch `packages/cli`; `@open-mercato/core`: 18,901 passed, 18 skipped. `template:sync` and ESLint on the changed files (0 errors) pass.
 
 ### Phase 6: Review follow-ups
 
