@@ -67,9 +67,9 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 
 ### Phase 5: Validation
 
-- [x] 5.1 Run the full validation gate — gate run at bee3a167a
+- [x] 5.1 Run the full validation gate — gate run at 0b9bc1f0a
 
-  Local runner (no compose `app` container). `build:packages`, `generate`, `build:packages`, `i18n:check-sync`, `i18n:check-usage`, `typecheck`, `build:app` green; `test` (run with `--continue`) green in every package except one `@open-mercato/cli` test — `module-package-sources.test.ts` compares `mtimeMs` with `toBe` and fails deterministically on macOS/APFS (`…713.999` vs `…714`). The branch does not touch `packages/cli`; `@open-mercato/core`: 18,901 passed, 18 skipped. `template:sync` and ESLint on the changed files (0 errors) pass.
+  Local runner (no compose `app` container), macOS. `build:packages`, `generate`, `build:packages`, `i18n:check-sync`, `i18n:check-usage`, `typecheck`, `build:app` green. `test` (run with `--continue`): every package green except two `@open-mercato/core` suites outside this change — a jest worker SIGSEGV in `staff/.../bulk/__tests__/route.fields.test.ts` and an ENOENT race in `modules/__tests__/crud-indexer-config.test.ts`, which scans `packages/shared` while a parallel `shared` test removes its temp directory; both pass when re-run on their own (22/22). `@open-mercato/core`: 18,882 passed, 18 skipped. `template:sync` and ESLint on the changed files (0 errors) pass.
 
 ### Phase 6: Review follow-ups
 
