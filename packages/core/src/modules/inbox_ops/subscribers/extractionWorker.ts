@@ -4,7 +4,7 @@ import type { EntityClass } from '@mikro-orm/core'
 import { findOneWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import { InboxEmail, InboxProposal, InboxProposalAction, InboxDiscrepancy, InboxSettings } from '../data/entities'
 import type { ExtractedParticipant, InboxDiscrepancyType } from '../data/entities'
-import { extractionOutputSchema } from '../data/validators'
+import { extractionOutputSchema, LINE_UNIT_MAX_LENGTH, parseLineConfidence } from '../data/validators'
 import { matchContacts } from '../lib/contactMatcher'
 import { buildExtractionSystemPrompt, buildExtractionUserPrompt } from '../lib/extractionPrompt'
 import { REQUIRED_FEATURES_MAP } from '../lib/constants'
@@ -637,7 +637,7 @@ function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: Ex
   const lineItems = Array.isArray(payload.lineItems)
     ? (payload.lineItems as Record<string, unknown>[])
     : []
-  const unrecognizedUnits: string[] = []
+  const unrecognizedUnits = new Map<string, string>()
   for (const item of lineItems) {
     if (!item.productName && typeof item.description === 'string') {
       item.productName = item.description
@@ -649,20 +649,26 @@ function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: Ex
       item.unitPrice = String(item.unitPrice)
     }
 
-    if (item.quantityUnit === undefined && item.unit !== undefined) {
+    if (item.quantityUnit == null && typeof item.unit === 'string') {
       item.quantityUnit = item.unit
       delete item.unit
     }
     const statedUnit = typeof item.quantityUnit === 'string' ? item.quantityUnit.trim() : ''
     if (!statedUnit) {
       delete item.quantityUnit
-    } else if (units === null) {
-      item.quantityUnit = statedUnit
     } else {
-      const unitCode = findUnitCode(statedUnit, units)
-      item.quantityUnit = unitCode ?? statedUnit
-      if (!unitCode && !unrecognizedUnits.includes(statedUnit)) {
-        unrecognizedUnits.push(statedUnit)
+      const unitCode = units ? findUnitCode(statedUnit, units) : null
+      const fitsLine = statedUnit.length <= LINE_UNIT_MAX_LENGTH
+      if (unitCode) {
+        item.quantityUnit = unitCode
+      } else if (fitsLine) {
+        item.quantityUnit = statedUnit
+      } else {
+        delete item.quantityUnit
+      }
+      const unitKey = statedUnit.toLowerCase()
+      if (!unitCode && (units !== null || !fitsLine) && !unrecognizedUnits.has(unitKey)) {
+        unrecognizedUnits.set(unitKey, statedUnit)
       }
     }
 
@@ -673,16 +679,7 @@ function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: Ex
       item.confidence = confidence
     }
   }
-  return unrecognizedUnits
-}
-
-function parseLineConfidence(value: unknown): number | undefined {
-  const parsed = typeof value === 'number'
-    ? value
-    : typeof value === 'string' && value.trim()
-      ? Number(value)
-      : Number.NaN
-  return Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : undefined
+  return Array.from(unrecognizedUnits.values())
 }
 
 function buildContactActionsForUnmatchedParticipants(

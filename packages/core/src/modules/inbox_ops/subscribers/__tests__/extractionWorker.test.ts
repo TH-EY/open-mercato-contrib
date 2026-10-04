@@ -812,6 +812,25 @@ describe('extractionWorker', () => {
       }))
     })
 
+    it('flags units case-insensitively once, reads a unit key sent next to a null quantityUnit, and drops an over-long unit', async () => {
+      mockFetchUnits.mockResolvedValueOnce(tenantUnits)
+      const longUnit = 'bags of twenty-five kilograms each'
+      mockOrderExtraction([
+        { productName: 'Cement', quantity: '10', quantityUnit: 'Bags' },
+        { productName: 'Lime', quantity: '4', quantityUnit: null, unit: 'bags' },
+        { productName: 'Mortar', quantity: '2', quantityUnit: longUnit },
+      ])
+
+      await handle(basePayload, mockCtx as any)
+
+      const lines = (createdOrderAction().payload as { lineItems: Record<string, unknown>[] }).lineItems
+      expect(lines[0].quantityUnit).toBe('Bags')
+      expect(lines[1].quantityUnit).toBe('bags')
+      expect(lines[1]).not.toHaveProperty('unit')
+      expect(lines[2]).not.toHaveProperty('quantityUnit')
+      expect(createdDiscrepancies('quantity_mismatch').map((d) => d.foundValue)).toEqual(['Bags', longUnit])
+    })
+
     it('keeps units as written without flagging them when the units cannot be loaded', async () => {
       mockOrderExtraction([{ productName: 'Cement', quantity: '10', quantityUnit: ' Bags ' }])
 

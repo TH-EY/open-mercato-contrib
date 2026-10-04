@@ -6,6 +6,13 @@ const coerceNumericString = z.preprocess(
   z.string().regex(/^\d+(\.\d+)?$/),
 )
 
+export const LINE_UNIT_MAX_LENGTH = 25
+
+export function parseLineConfidence(value: unknown): number | undefined {
+  const parsed = typeof value === 'string' && value.trim() ? Number(value) : value
+  return typeof parsed === 'number' && Number.isFinite(parsed) && parsed >= 0 && parsed <= 1 ? parsed : undefined
+}
+
 // ---------------------------------------------------------------------------
 // Action Payload Schemas
 // ---------------------------------------------------------------------------
@@ -34,12 +41,15 @@ export const orderPayloadSchema = z.object({
     variantId: uuid().optional(),
     sku: z.string().trim().max(100).optional(),
     quantity: coerceNumericString,
-    quantityUnit: z.string().trim().min(1).max(25).optional(),
+    quantityUnit: z.preprocess(
+      (val) => (typeof val === 'string' && val.trim() ? val : undefined),
+      z.string().trim().max(LINE_UNIT_MAX_LENGTH).optional(),
+    ),
     unitPrice: coerceNumericString.optional(),
     catalogPrice: z.string().optional(),
     kind: z.enum(['product', 'service']).default('product'),
     description: z.string().trim().max(2000).optional(),
-    confidence: z.number().min(0).max(1).optional(),
+    confidence: z.preprocess(parseLineConfidence, z.number().optional()),
   })).min(1).max(100),
   requestedDeliveryDate: z.string().optional(),
   notes: z.string().trim().max(4000).optional(),

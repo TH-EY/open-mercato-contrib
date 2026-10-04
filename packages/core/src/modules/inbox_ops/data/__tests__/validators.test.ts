@@ -12,6 +12,7 @@ import {
   extractionOutputSchema,
   proposalListQuerySchema,
   validateActionPayloadForType,
+  parseLineConfidence,
 } from '../validators'
 
 describe('orderPayloadSchema', () => {
@@ -91,18 +92,54 @@ describe('orderPayloadSchema', () => {
     expect(result.data.lineItems[0]).toEqual({ productName: 'Widget A', quantity: '10', kind: 'product' })
   })
 
+  it('rejects a line unit longer than 25 characters', () => {
+    const result = orderPayloadSchema.safeParse({
+      ...validPayload,
+      lineItems: [{ productName: 'A', quantity: '1', quantityUnit: 'x'.repeat(26) }],
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('reads a numeric-string line confidence as a number', () => {
+    const result = orderPayloadSchema.safeParse({
+      ...validPayload,
+      lineItems: [{ productName: 'A', quantity: '1', confidence: '0.4' }],
+    })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.lineItems[0].confidence).toBe(0.4)
+  })
+
   it.each([
-    ['an empty unit', { quantityUnit: '  ' }],
-    ['a unit longer than 25 characters', { quantityUnit: 'x'.repeat(26) }],
+    ['a blank unit', { quantityUnit: '  ' }],
+    ['a non-string unit', { quantityUnit: 5 }],
     ['a confidence above 1', { confidence: 1.5 }],
     ['a negative confidence', { confidence: -0.1 }],
     ['a non-numeric confidence', { confidence: 'high' }],
-  ])('rejects a line with %s', (_label, line) => {
+  ])('accepts a stored line with %s and drops the value', (_label, line) => {
     const result = orderPayloadSchema.safeParse({
       ...validPayload,
       lineItems: [{ productName: 'A', quantity: '1', ...line }],
     })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.lineItems[0]).toEqual({ productName: 'A', quantity: '1', kind: 'product' })
+  })
+})
+
+describe('parseLineConfidence', () => {
+  it.each([
+    [0, 0],
+    [1, 1],
+    [0.35, 0.35],
+    ['0.8', 0.8],
+    [' 1 ', 1],
+  ])('reads %p as %p', (value, expected) => {
+    expect(parseLineConfidence(value)).toBe(expected)
+  })
+
+  it.each([[1.01], [-0.5], [90], ['high'], [''], [null], [undefined], [Number.NaN]])('drops %p', (value) => {
+    expect(parseLineConfidence(value)).toBeUndefined()
   })
 })
 
