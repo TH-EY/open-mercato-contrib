@@ -88,6 +88,26 @@ describe('buildExtractionSystemPrompt', () => {
     expect(result).toContain('No catalog products available for matching')
   })
 
+  it('lists the tenant units of measure with codes and labels', async () => {
+    const units = [
+      { code: 'kg', label: 'Kilogram (weight)' },
+      { code: 'm2', label: 'Square Meter (area)' },
+    ]
+    const result = await buildExtractionSystemPrompt([], [], undefined, undefined, mockActions, units)
+    expect(result).toContain('Units of measure')
+    expect(result).toContain('{"code":"kg","label":"Kilogram (weight)"}')
+    expect(result).toContain('{"code":"m2","label":"Square Meter (area)"}')
+  })
+
+  it.each([
+    ['empty', []],
+    ['unavailable', null],
+    ['not passed', undefined],
+  ])('shows "No units of measure configured" when the unit list is %s', async (_label, units) => {
+    const result = await buildExtractionSystemPrompt([], [], undefined, undefined, mockActions, units)
+    expect(result).toContain('No units of measure configured')
+  })
+
   it('includes channel ID when provided', async () => {
     const result = await buildExtractionSystemPrompt([], [], 'ch-001', undefined, mockActions)
     expect(result).toContain('Default sales channel ID: ch-001')

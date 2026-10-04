@@ -40,6 +40,7 @@ export async function buildExtractionSystemPrompt(
   channelId?: string,
   workingLanguage?: string,
   registeredActions?: InboxActionDefinition[],
+  units?: { code: string; label: string }[] | null,
 ): Promise<string> {
   const actions = registeredActions ?? await loadRegisteredActions()
 
@@ -64,6 +65,10 @@ export async function buildExtractionSystemPrompt(
   const productsSection = catalogProducts.length > 0
     ? `\nCatalog products (top matches):\n${JSON.stringify(catalogProducts.slice(0, 20), null, 2)}`
     : '\nNo catalog products available for matching.'
+
+  const unitsSection = units && units.length > 0
+    ? `\nUnits of measure (code and label):\n${JSON.stringify(units.map((unit) => ({ code: unit.code, label: unit.label })))}`
+    : '\nNo units of measure configured.'
 
   const channelSection = channelId
     ? `\nDefault sales channel ID: ${channelId}`
@@ -103,6 +108,7 @@ ${actionRulesSection}
 </rules>
 ${contactsSection}
 ${productsSection}
+${unitsSection}
 ${channelSection}`
 }
 
