@@ -841,15 +841,26 @@ describe('extractionWorker', () => {
       expect(createdDiscrepancies('quantity_mismatch')).toHaveLength(0)
     })
 
-    it('flags every stated unit when the tenant has no unit dictionary', async () => {
+    it('leaves units off and flags nothing when the tenant has no units of measure', async () => {
       mockFetchUnits.mockResolvedValueOnce([])
-      mockOrderExtraction([{ productName: 'Cement', quantity: '10', quantityUnit: 'kg' }])
+      mockOrderExtraction([{ productName: 'Cement', quantity: '10', quantityUnit: 'kg', confidence: 0.7 }])
 
       await handle(basePayload, mockCtx as any)
 
-      expect(createdDiscrepancies('quantity_mismatch')).toEqual([
-        expect.objectContaining({ foundValue: 'kg' }),
-      ])
+      const lines = (createdOrderAction().payload as { lineItems: Record<string, unknown>[] }).lineItems
+      expect(lines[0]).not.toHaveProperty('quantityUnit')
+      expect(lines[0].confidence).toBe(0.7)
+      expect(createdDiscrepancies('quantity_mismatch')).toHaveLength(0)
+    })
+
+    it('drops an over-long unit without flagging it when the units cannot be loaded', async () => {
+      mockOrderExtraction([{ productName: 'Cement', quantity: '10', quantityUnit: 'bags of twenty-five kilograms each' }])
+
+      await handle(basePayload, mockCtx as any)
+
+      const lines = (createdOrderAction().payload as { lineItems: Record<string, unknown>[] }).lineItems
+      expect(lines[0]).not.toHaveProperty('quantityUnit')
+      expect(createdDiscrepancies('quantity_mismatch')).toHaveLength(0)
     })
   })
 

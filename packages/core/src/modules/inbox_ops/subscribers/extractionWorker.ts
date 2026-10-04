@@ -654,20 +654,20 @@ function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: Ex
       delete item.unit
     }
     const statedUnit = typeof item.quantityUnit === 'string' ? item.quantityUnit.trim() : ''
-    if (!statedUnit) {
+    const tenantHasNoUnits = units !== null && units.length === 0
+    if (!statedUnit || tenantHasNoUnits) {
       delete item.quantityUnit
     } else {
       const unitCode = units ? findUnitCode(statedUnit, units) : null
-      const fitsLine = statedUnit.length <= LINE_UNIT_MAX_LENGTH
       if (unitCode) {
         item.quantityUnit = unitCode
-      } else if (fitsLine) {
+      } else if (statedUnit.length <= LINE_UNIT_MAX_LENGTH) {
         item.quantityUnit = statedUnit
       } else {
         delete item.quantityUnit
       }
       const unitKey = statedUnit.toLowerCase()
-      if (!unitCode && (units !== null || !fitsLine) && !unrecognizedUnits.has(unitKey)) {
+      if (units && !unitCode && !unrecognizedUnits.has(unitKey)) {
         unrecognizedUnits.set(unitKey, statedUnit)
       }
     }
