@@ -688,10 +688,12 @@ const orderPayloadSchema = z.object({
     variantId: z.string().uuid().optional(),          // For products with variants
     sku: z.string().optional(),                       // Extracted SKU for matching
     quantity: z.string().regex(/^\d+(\.\d+)?$/),      // Numeric string (precision-safe)
+    quantityUnit: z.string().max(25).optional(),      // Unit of measure: tenant unit-dictionary code, or the unit as written when unknown
     unitPrice: z.string().regex(/^\d+(\.\d+)?$/).optional(),  // Extracted price
     catalogPrice: z.string().optional(),              // Price from selectBestPrice for comparison
     kind: z.enum(['product', 'service']).default('product'),  // 'service' if product not matched
     description: z.string().optional(),
+    confidence: z.number().min(0).max(1).optional(),  // Model confidence for this line (0.0-1.0)
   })),
   requestedDeliveryDate: z.string().optional(),       // ISO 8601
   notes: z.string().optional(),
@@ -1913,6 +1915,10 @@ No parallel provider stack is introduced for InboxOps. The worker reuses the exi
 ---
 
 ## Changelog
+
+### 2026-10-04
+
+- **Unit of measure and per-line confidence on order lines**: `create_order` / `create_quote` line items gain optional `quantityUnit` and `confidence` (section 8.1). The extraction prompt lists the tenant's unit-of-measure dictionary (keys `unit` / `units` / `measurement_units`, the dictionary the sales line commands validate against); the extraction worker stores a recognized unit as its canonical code, keeps an unknown unit as written and raises a `quantity_mismatch` discrepancy (`inbox_ops.discrepancy.desc.unit_not_recognized`, severity `error`), and drops an invalid line confidence. Accepting the action passes `quantityUnit` to the created sales line, where the sales UoM normalization (product conversions, `normalizedQuantity`, `uomSnapshot`) applies. The order preview shows the unit and the per-line confidence, and the edit-in-sales-form path keeps the unit. Payloads without the fields are unchanged; the provider-side extraction schema is untouched because line items travel inside `payloadJson`.
 
 ### 2026-09-21
 
