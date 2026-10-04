@@ -1378,7 +1378,6 @@ export function SalesDocumentForm({ onCreated, isSubmitting = false, initialKind
           productVariantId: typeof item.productVariantId === 'string' ? item.productVariantId : undefined,
           name: item.productName || item.name || `Line ${index + 1}`,
           quantity: Number.isFinite(quantity) ? quantity : 1,
-          quantityUnit: typeof item.quantityUnit === 'string' ? item.quantityUnit : undefined,
           currencyCode: inboxPreFill?.currencyCode || defaultCurrency,
           unitPriceNet: Number.isFinite(unitPrice) ? unitPrice : 0,
           unitPriceGross: Number.isFinite(unitPrice) ? unitPrice : 0,

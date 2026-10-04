@@ -497,7 +497,6 @@
   "sales.documents.adjustments.title": "Korekty",
   "sales.documents.adjustments.untitled": "Bez tytułu",
   "sales.documents.adjustments.updated": "Korekta zaktualizowana.",
-  "sales.documents.create.inboxLineUnitsNotApplied": "Niektóre pozycje dodano bez jednostki miary: {{lines}}",
   "sales.documents.create.title": "Utwórz dokument sprzedaży",
   "sales.documents.detail.addresses.add": "Dodaj adres",
   "sales.documents.detail.addresses.additional": "Dodatkowe adresy",

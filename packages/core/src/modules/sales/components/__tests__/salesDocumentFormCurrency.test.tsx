@@ -247,27 +247,4 @@ describe('SalesDocumentForm default currency', () => {
       expect(capturedInitialValues?.currencyCode).toBe('GBP')
     })
   })
-
-  it('keeps the unit of inbox line items in the prefilled order lines', async () => {
-    render(
-      <SalesDocumentForm
-        onCreated={jest.fn()}
-        initialKind="order"
-        inboxPreFill={{
-          currencyCode: 'EUR',
-          lineItems: [
-            { productName: 'Cement', quantity: '10', quantityUnit: 'bag' },
-            { productName: 'Sand', quantity: '2' },
-          ],
-        }}
-      />,
-    )
-
-    await waitFor(() => {
-      expect(capturedInitialValues?.lines).toHaveLength(2)
-    })
-    const lines = capturedInitialValues?.lines as { record: { name: string; quantity: number; quantityUnit: string | null } }[]
-    expect(lines[0].record).toEqual(expect.objectContaining({ name: 'Cement', quantity: 10, quantityUnit: 'bag' }))
-    expect(lines[1].record.quantityUnit).toBeNull()
-  })
 })

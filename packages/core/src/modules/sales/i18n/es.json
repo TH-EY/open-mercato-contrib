@@ -497,7 +497,6 @@
   "sales.documents.adjustments.title": "Ajustes",
   "sales.documents.adjustments.untitled": "Sin título",
   "sales.documents.adjustments.updated": "Ajuste actualizado.",
-  "sales.documents.create.inboxLineUnitsNotApplied": "Algunas líneas se añadieron sin su unidad de medida: {{lines}}",
   "sales.documents.create.title": "Crear documento de ventas",
   "sales.documents.detail.addresses.add": "Agregar dirección",
   "sales.documents.detail.addresses.additional": "Direcciones adicionales",
