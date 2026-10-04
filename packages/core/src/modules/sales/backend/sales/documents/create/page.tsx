@@ -76,6 +76,7 @@ export default function CreateSalesDocumentPage() {
             kind: item.kind || (item.productId ? 'product' : 'service'),
           }
           if (item.productId) linePayload.productId = item.productId
+          if (typeof item.quantityUnit === 'string' && item.quantityUnit) linePayload.quantityUnit = item.quantityUnit
           if (item.unitPrice) linePayload.unitPriceNet = item.unitPrice
           if (item.sku || item.catalogPrice) {
             linePayload.catalogSnapshot = {
