@@ -20,6 +20,8 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 ## Non-goals
 
 - Auto-accepting actions above a confidence threshold — this change only stores and shows the signal.
+- Re-evaluating the `unit_not_recognized` discrepancy after the unit dictionary or the action payload changes — discrepancies are not re-checked after extraction anywhere in `inbox_ops`; "Edit" (the sales document form) remains the way past it.
+- Special handling of sales errors for custom lines: an unrecognized unit that reaches accept through the API fails with the sales error, like every other sales validation error raised by an inbox action.
 - Carrying the unit into the "Edit" path (the prefilled sales document form): the form cannot check a unit against the product's base unit and conversions on the client, and an unchecked unit would turn a save that works today into a `uom.*` error. Units there are chosen in the line dialog from the product's own units, as before.
 - Checking the unit against the matched product's base unit and conversions at extraction time — it is checked on accept, where the line's product is final (it can change after extraction, e.g. through `create_product`).
 - Units in `update_order.quantityChanges` and in auto-generated `create_product` actions; converting quantities between units; seeding new units.
@@ -29,7 +31,7 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 ## Decisions
 
 - `quantityUnit` holds the canonical dictionary code (`canonicalizeUnitCode` from `@open-mercato/shared/lib/units/unitCodes`) when the unit is recognized; an unrecognized unit is kept as written, so the reviewer sees what the email said, and gets a `quantity_mismatch` discrepancy with severity `error` (accepting it would fail with `uom.unit_not_found`) and description key `inbox_ops.discrepancy.desc.unit_not_recognized`.
-- When the unit dictionary cannot be read (dictionary entities not resolvable, query failure), units are kept as written and no unit discrepancy is raised; a tenant without a unit dictionary is treated as having no units, matching `sales`.
+- When the unit dictionary cannot be read (dictionary entities not resolvable, query failure), units are kept as written and no unit discrepancy is raised. A tenant without units of measure (no unit dictionary, or one without entries) gets no line units at all and no discrepancy — `sales` would reject any unit there, and before this change units were dropped anyway.
 - Invalid per-line confidence never blocks acceptance: the worker drops it before storing, and the schema reads an invalid stored value as absent, so payloads stored before this change keep validating. A blank unit is read as absent; a unit longer than 25 characters is not stored (the worker flags it) and is rejected on edit.
 - On accept, a line with a catalog product passes its unit only when sales can store it for that product: the product's base unit or a unit with an active conversion is forwarded; for a product without a base unit the unit is left off (sales cannot store a unit there, and before this change no unit was sent); any other unit fails the action with a 400 that names the line, instead of a raw `uom.*` code. Custom lines forward the unit and sales validates it against the dictionary.
 - The unit lookup reads every dictionary entry (sales matches against all of them); only the prompt list is capped, at 200 units.
@@ -79,3 +81,4 @@ Let an order line extracted by `inbox_ops` (`create_order` / `create_quote`) car
 - [x] 6.5 Show the unit discrepancy once and ignore out-of-range line confidence — d3c670f22
 - [x] 6.6 Cover catalog line units and unit conversion in `TC-INBOX-011` — 602bb109a
 - [x] 6.7 Leave inbox line units out of the sales document form prefill (supersedes 3.2) — 039e6fa88
+- [x] 6.8 Leave line units off for tenants without units of measure — 202d9ef30
