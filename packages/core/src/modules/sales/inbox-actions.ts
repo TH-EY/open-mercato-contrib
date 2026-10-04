@@ -1,7 +1,7 @@
 import type { InboxActionDefinition, InboxActionExecutionContext } from '@open-mercato/shared/modules/inbox-actions'
 import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
+import { isCrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { toUnitLookupKey } from '@open-mercato/shared/lib/units/unitCodes'
-import { CatalogProduct, CatalogProductUnitConversion } from '../catalog/data/entities'
 import { orderPayloadSchema, updateOrderPayloadSchema, updateShipmentPayloadSchema } from '../inbox_ops/data/validators'
 import type { OrderPayload, UpdateOrderPayload, UpdateShipmentPayload } from '../inbox_ops/data/validators'
 import {
@@ -25,71 +25,60 @@ import type { ExecutionHelperContext } from '../inbox_ops/lib/executionHelpers'
 
 type OrderLineItem = OrderPayload['lineItems'][number]
 
-type ProductUnitRules = {
-  baseUnit: string | null
-  convertibleUnits: Set<string>
+const UOM_ERROR_MESSAGES: Record<string, string> = {
+  'uom.unit_not_found': 'A line unit of measure is not in the units dictionary. Add the unit to the dictionary or change the line unit.',
+  'uom.conversion_not_found': "A line unit of measure has no conversion to its product's base unit. Add a unit conversion to the product or change the line unit.",
+  'uom.default_unit_missing': 'A line product has no base unit of measure. Set the base unit on the product or remove the line unit.',
 }
 
-function readEntityRefId(value: unknown): string | null {
-  if (typeof value === 'string') return value
-  if (value && typeof value === 'object' && typeof (value as { id?: unknown }).id === 'string') {
-    return (value as { id: string }).id
-  }
-  return null
-}
-
-async function loadProductUnitRules(
+async function loadProductBaseUnits(
   hCtx: ExecutionHelperContext,
   lines: OrderLineItem[],
-): Promise<Map<string, ProductUnitRules>> {
-  const rules = new Map<string, ProductUnitRules>()
+): Promise<Map<string, string | null>> {
+  const baseUnits = new Map<string, string | null>()
   const productIds = Array.from(new Set(
     lines
       .filter((line) => line.productId && line.quantityUnit)
       .map((line) => line.productId as string),
   ))
-  if (productIds.length === 0) return rules
+  const CatalogProductClass = productIds.length > 0 ? resolveEntityClass(hCtx, 'CatalogProduct') : null
+  if (!CatalogProductClass) return baseUnits
 
   const scope = { tenantId: hCtx.tenantId, organizationId: hCtx.organizationId }
   const products = await findWithDecryption(
     hCtx.em,
-    CatalogProduct,
+    CatalogProductClass,
     { id: { $in: productIds }, ...scope, deletedAt: null },
     undefined,
     scope,
   )
   for (const product of products) {
-    rules.set(product.id, { baseUnit: toUnitLookupKey(product.defaultUnit), convertibleUnits: new Set() })
+    baseUnits.set(product.id, toUnitLookupKey(product.defaultUnit))
   }
-
-  const conversions = await findWithDecryption(
-    hCtx.em,
-    CatalogProductUnitConversion,
-    { product: { $in: productIds }, ...scope, deletedAt: null, isActive: true },
-    undefined,
-    scope,
-  )
-  for (const conversion of conversions) {
-    const productRules = rules.get(readEntityRefId(conversion.product) ?? '')
-    const unitKey = toUnitLookupKey(conversion.unitCode)
-    if (productRules && unitKey) productRules.convertibleUnits.add(unitKey)
-  }
-  return rules
+  return baseUnits
 }
 
-function resolveSalesLineUnit(line: OrderLineItem, rules: Map<string, ProductUnitRules>): string | undefined {
+function resolveSalesLineUnit(line: OrderLineItem, productBaseUnits: Map<string, string | null>): string | undefined {
   if (!line.quantityUnit) return undefined
-  const productRules = line.productId ? rules.get(line.productId) : undefined
-  if (!productRules) return line.quantityUnit
-  if (!productRules.baseUnit) return undefined
-  const unitKey = toUnitLookupKey(line.quantityUnit)
-  if (unitKey === productRules.baseUnit || (unitKey && productRules.convertibleUnits.has(unitKey))) {
-    return line.quantityUnit
+  if (line.productId && productBaseUnits.get(line.productId) === null) return undefined
+  return line.quantityUnit
+}
+
+async function executeDocumentCreate<TResult>(
+  hCtx: ExecutionHelperContext,
+  commandId: string,
+  input: Record<string, unknown>,
+): Promise<TResult> {
+  try {
+    return await executeCommand<Record<string, unknown>, TResult>(hCtx, commandId, input)
+  } catch (err) {
+    const code = isCrudHttpError(err) && typeof err.body?.error === 'string' ? err.body.error : null
+    if (code && code.startsWith('uom.')) {
+      const message = UOM_ERROR_MESSAGES[code] ?? 'A line unit of measure cannot be applied.'
+      throw new ExecutionError(`${message} (${code})`, 400)
+    }
+    throw err
   }
-  throw new ExecutionError(
-    `Unit "${line.quantityUnit}" of line "${line.productName}" has no conversion to the product's base unit "${productRules.baseUnit}". Add a unit conversion to the product or change the line unit.`,
-    400,
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +102,7 @@ async function executeCreateDocumentAction(
   }
 
   const currencyCode = payload.currencyCode.trim().toUpperCase()
-  const productUnitRules = await loadProductUnitRules(hCtx, payload.lineItems)
+  const productBaseUnits = await loadProductBaseUnits(hCtx, payload.lineItems)
   const lines = payload.lineItems.map((line, index) => {
     const quantity = parseNumberToken(line.quantity, `lineItems[${index}].quantity`)
     const unitPrice = line.unitPrice
@@ -131,7 +120,7 @@ async function executeCreateDocumentAction(
 
     if (line.productId) mappedLine.productId = line.productId
     if (line.variantId) mappedLine.productVariantId = line.variantId
-    const quantityUnit = resolveSalesLineUnit(line, productUnitRules)
+    const quantityUnit = resolveSalesLineUnit(line, productBaseUnits)
     if (quantityUnit) mappedLine.quantityUnit = quantityUnit
     if (unitPrice !== undefined) mappedLine.unitPriceNet = unitPrice
     if (line.sku || line.catalogPrice) {
@@ -196,22 +185,14 @@ async function executeCreateDocumentAction(
     : kind
 
   if (effectiveKind === 'order') {
-    const result = await executeCommand<Record<string, unknown>, { orderId?: string }>(
-      hCtx,
-      'sales.orders.create',
-      createInput,
-    )
+    const result = await executeDocumentCreate<{ orderId?: string }>(hCtx, 'sales.orders.create', createInput)
     if (!result.orderId) {
       throw new ExecutionError('Order creation did not return an order ID', 500)
     }
     return { createdEntityId: result.orderId, createdEntityType: 'sales_order' }
   }
 
-  const result = await executeCommand<Record<string, unknown>, { quoteId?: string }>(
-    hCtx,
-    'sales.quotes.create',
-    createInput,
-  )
+  const result = await executeDocumentCreate<{ quoteId?: string }>(hCtx, 'sales.quotes.create', createInput)
   if (!result.quoteId) {
     throw new ExecutionError('Quote creation did not return a quote ID', 500)
   }

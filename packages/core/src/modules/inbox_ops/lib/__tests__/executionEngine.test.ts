@@ -9,6 +9,7 @@ import {
   getRequiredFeature,
 } from '../executionEngine'
 import type { InboxProposalAction } from '../../data/entities'
+import { CrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 
 const mockFindOneWithDecryption = jest.fn()
 const mockFindWithDecryption = jest.fn()
@@ -613,42 +614,37 @@ describe('executionEngine', () => {
     })
 
     describe('lines with a catalog product', () => {
-      const productWithUnits = '123e4567-e89b-4d56-a456-426614174101'
-      const productWithoutUnits = '123e4567-e89b-4d56-a456-426614174102'
+      const productWithUnit = '123e4567-e89b-4d56-a456-426614174101'
+      const productWithoutUnit = '123e4567-e89b-4d56-a456-426614174102'
+      const MockCatalogProduct = class {} as unknown
 
-      function productPayload(lineItems: Record<string, unknown>[]) {
-        return { customerName: 'Acme Corp', channelId: VALID_UUID, currencyCode: 'EUR', lineItems }
+      function catalogCtx(em: ReturnType<typeof createMockEm>) {
+        const ctx = makeCtx(em)
+        return { ...ctx, entities: { ...ctx.entities, CatalogProduct: MockCatalogProduct } }
       }
 
       function mockCatalog() {
-        mockFindWithDecryption.mockImplementation(async (_em: unknown, entity: { name?: string }) => {
-          if (entity?.name === 'CatalogProduct') {
-            return [
-              { id: productWithUnits, defaultUnit: 'BAG' },
-              { id: productWithoutUnits, defaultUnit: null },
-            ]
-          }
-          if (entity?.name === 'CatalogProductUnitConversion') {
-            return [{ product: { id: productWithUnits }, unitCode: 't' }]
-          }
-          return []
-        })
+        mockFindWithDecryption.mockImplementation(async (_em: unknown, entity: unknown) => (
+          entity === MockCatalogProduct
+            ? [{ id: productWithUnit, defaultUnit: 'BAG' }, { id: productWithoutUnit, defaultUnit: null }]
+            : []
+        ))
       }
 
       async function executeWithLines(lineItems: Record<string, unknown>[]) {
         const em = createMockEm()
         em.nativeUpdate.mockResolvedValue(1)
-        const payload = productPayload(lineItems)
+        const payload = { customerName: 'Acme Corp', channelId: VALID_UUID, currencyCode: 'EUR', lineItems }
         mockFindOneWithDecryption.mockResolvedValueOnce(makeAction({ id: 'a-product-units', status: 'processing', payload }))
-        mockCommandBus.execute.mockResolvedValue({ result: { orderId: 'order-product-units' } })
-        return executeAction(makeAction({ id: 'a-product-units', payload }), makeCtx(em))
+        return executeAction(makeAction({ id: 'a-product-units', payload }), catalogCtx(em))
       }
 
-      it('forwards the base unit and units the product converts from', async () => {
+      it('forwards the unit of a product that has a base unit and leaves the conversion check to sales', async () => {
         mockCatalog()
+        mockCommandBus.execute.mockResolvedValue({ result: { orderId: 'order-product-units' } })
         const result = await executeWithLines([
-          { productName: 'Cement', productId: productWithUnits, quantity: '10', quantityUnit: 'bag' },
-          { productName: 'Cement', productId: productWithUnits, quantity: '2', quantityUnit: 't' },
+          { productName: 'Cement', productId: productWithUnit, quantity: '10', quantityUnit: 'bag' },
+          { productName: 'Cement', productId: productWithUnit, quantity: '2', quantityUnit: 't' },
         ])
 
         expect(result.success).toBe(true)
@@ -658,8 +654,9 @@ describe('executionEngine', () => {
 
       it('leaves the unit off lines whose product has no base unit', async () => {
         mockCatalog()
+        mockCommandBus.execute.mockResolvedValue({ result: { orderId: 'order-product-units' } })
         const result = await executeWithLines([
-          { productName: 'Sand', productId: productWithoutUnits, quantity: '3', quantityUnit: 'kg' },
+          { productName: 'Sand', productId: productWithoutUnit, quantity: '3', quantityUnit: 'kg' },
         ])
 
         expect(result.success).toBe(true)
@@ -667,32 +664,49 @@ describe('executionEngine', () => {
         expect(lines[0]).not.toHaveProperty('quantityUnit')
       })
 
-      it('fails with a 400 naming the line when the product cannot convert from the unit', async () => {
+      it('reads products within the tenant and organization through the DI-registered class', async () => {
         mockCatalog()
+        mockCommandBus.execute.mockResolvedValue({ result: { orderId: 'order-product-units' } })
+        await executeWithLines([
+          { productName: 'Cement', productId: productWithUnit, quantity: '10', quantityUnit: 'bag' },
+        ])
+
+        const productCalls = mockFindWithDecryption.mock.calls.filter(([, entity]) => entity === MockCatalogProduct)
+        expect(productCalls).toHaveLength(1)
+        const [, , where, , scope] = productCalls[0]
+        expect(where).toEqual({ id: { $in: [productWithUnit] }, tenantId: 'tenant-1', organizationId: 'org-1', deletedAt: null })
+        expect(scope).toEqual({ tenantId: 'tenant-1', organizationId: 'org-1' })
+      })
+
+      it('turns a sales unit-of-measure error into a readable 400', async () => {
+        mockCatalog()
+        mockCommandBus.execute.mockRejectedValue(new CrudHttpError(400, { error: 'uom.conversion_not_found' }))
         const result = await executeWithLines([
-          { productName: 'Cement', productId: productWithUnits, quantity: '40', quantityUnit: 'm2' },
+          { productName: 'Cement', productId: productWithUnit, quantity: '40', quantityUnit: 'm2' },
         ])
 
         expect(result.success).toBe(false)
         expect(result.statusCode).toBe(400)
-        expect(result.error).toContain('Unit "m2" of line "Cement"')
-        expect(mockCommandBus.execute).not.toHaveBeenCalledWith('sales.orders.create', expect.anything())
+        expect(result.error).toContain("has no conversion to its product's base unit")
+        expect(result.error).toContain('(uom.conversion_not_found)')
       })
 
-      it('queries products and conversions within the tenant and organization', async () => {
-        mockCatalog()
-        await executeWithLines([
-          { productName: 'Cement', productId: productWithUnits, quantity: '10', quantityUnit: 'bag' },
-        ])
+      it('turns an unknown unit on a line without a product into a readable 400', async () => {
+        mockCommandBus.execute.mockRejectedValue(new CrudHttpError(400, { error: 'uom.unit_not_found' }))
+        const result = await executeWithLines([{ productName: 'Tiles', quantity: '40', quantityUnit: 't' }])
 
-        const catalogCalls = mockFindWithDecryption.mock.calls.filter(([, entity]) =>
-          ['CatalogProduct', 'CatalogProductUnitConversion'].includes((entity as { name?: string })?.name ?? ''),
-        )
-        expect(catalogCalls).toHaveLength(2)
-        for (const [, , where, , scope] of catalogCalls) {
-          expect(where).toEqual(expect.objectContaining({ tenantId: 'tenant-1', organizationId: 'org-1', deletedAt: null }))
-          expect(scope).toEqual({ tenantId: 'tenant-1', organizationId: 'org-1' })
-        }
+        expect(result.success).toBe(false)
+        expect(result.statusCode).toBe(400)
+        expect(result.error).toContain('is not in the units dictionary')
+      })
+
+      it('leaves other sales errors unchanged', async () => {
+        mockCommandBus.execute.mockRejectedValue(new CrudHttpError(400, { error: 'sales.some_other_error' }))
+        const result = await executeWithLines([{ productName: 'Tiles', quantity: '40', quantityUnit: 'm2' }])
+
+        expect(result.success).toBe(false)
+        expect(result.statusCode).toBe(500)
+        expect(result.error).toBe('sales.some_other_error')
       })
     })
 

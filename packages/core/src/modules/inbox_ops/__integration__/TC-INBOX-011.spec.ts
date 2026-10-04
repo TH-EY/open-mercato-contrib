@@ -18,8 +18,8 @@ import { deleteCatalogProductIfExists } from '@open-mercato/core/modules/core/__
  * confidence. The edit route validates them, the proposal API returns them, and
  * accepting the action creates sales lines with the unit in `quantity_unit`:
  * custom lines take any dictionary unit, catalog lines only the product's base
- * unit or a unit it converts from — anything else fails the action with a 400
- * that names the line. Line items are set through the edit route so the
+ * unit or a unit it converts from — sales rejects anything else and the action
+ * fails with a readable 400. Line items are set through the edit route so the
  * assertions do not depend on what the model extracted. Units come from the
  * unit dictionary seeded with the catalog defaults (`kg`, `g`, `m2`).
  *
@@ -170,7 +170,7 @@ test.describe('TC-INBOX-011: Order line unit of measure and confidence', () => {
     const unconvertibleAccept = await apiRequest(request, 'POST', `${actionPath}/accept`, { token });
     expect(unconvertibleAccept.status()).toBe(400);
     const unconvertibleBody = await readJsonSafe<{ error?: string }>(unconvertibleAccept);
-    expect(unconvertibleBody?.error ?? '').toContain('Unit "m2" of line "TC-INBOX-011 Steel Wire"');
+    expect(unconvertibleBody?.error ?? '').toContain('(uom.conversion_not_found)');
 
     const editResponse = await apiRequest(request, 'PATCH', actionPath, {
       token,

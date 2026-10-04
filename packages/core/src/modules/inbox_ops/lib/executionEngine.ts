@@ -30,6 +30,7 @@ export interface CrossModuleEntities {
   SalesChannel: EntityClass<CommonEntityFields & { id: string; name: string; metadata?: Record<string, unknown> | null }>
   Dictionary: EntityClass<CommonEntityFields & { id: string; key: string }>
   DictionaryEntry: EntityClass<CommonEntityFields & { id: string; label: string; value: string; normalizedValue?: string | null; dictionary: unknown }>
+  CatalogProduct?: EntityClass<CommonEntityFields & { id: string; defaultUnit?: string | null }>
 }
 
 interface ExecutionContext {
