@@ -497,6 +497,7 @@
   "sales.documents.adjustments.title": "조정 항목",
   "sales.documents.adjustments.untitled": "제목 없음",
   "sales.documents.adjustments.updated": "조정 항목이 수정되었습니다.",
+  "sales.documents.create.inboxLineUnitsNotApplied": "일부 품목이 측정 단위 없이 추가되었습니다: {{lines}}",
   "sales.documents.create.title": "판매 문서 생성",
   "sales.documents.detail.addresses.add": "주소 추가",
   "sales.documents.detail.addresses.additional": "추가 주소",

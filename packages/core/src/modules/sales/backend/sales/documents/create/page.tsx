@@ -66,6 +66,7 @@ export default function CreateSalesDocumentPage() {
         ? inboxDraft.payload.currencyCode.trim().toUpperCase()
         : 'USD'
 
+      const linesWithoutUnit: string[] = []
       for (const [index, item] of lineItems.entries()) {
         try {
           const linePayload: Record<string, unknown> = {
@@ -76,7 +77,8 @@ export default function CreateSalesDocumentPage() {
             kind: item.kind || (item.productId ? 'product' : 'service'),
           }
           if (item.productId) linePayload.productId = item.productId
-          if (typeof item.quantityUnit === 'string' && item.quantityUnit) linePayload.quantityUnit = item.quantityUnit
+          const quantityUnit = typeof item.quantityUnit === 'string' && item.quantityUnit ? item.quantityUnit : null
+          if (quantityUnit) linePayload.quantityUnit = quantityUnit
           if (item.unitPrice) linePayload.unitPriceNet = item.unitPrice
           if (item.sku || item.catalogPrice) {
             linePayload.catalogSnapshot = {
@@ -85,13 +87,30 @@ export default function CreateSalesDocumentPage() {
             }
           }
           // optimistic-lock-exempt: create-only line item on newly created document, no prior version
-          await apiCall(lineEndpoint, {
+          const created = await apiCall(lineEndpoint, {
             method: 'POST',
             body: JSON.stringify(linePayload),
           })
+          if (!created.ok && created.status === 400 && quantityUnit) {
+            delete linePayload.quantityUnit
+            // optimistic-lock-exempt: create-only line item on newly created document, no prior version
+            const retried = await apiCall(lineEndpoint, {
+              method: 'POST',
+              body: JSON.stringify(linePayload),
+            })
+            if (retried.ok) linesWithoutUnit.push(String(linePayload.name))
+          }
         } catch {
           // Best-effort line creation; user can add remaining lines manually
         }
+      }
+      if (linesWithoutUnit.length > 0) {
+        flash(
+          t('sales.documents.create.inboxLineUnitsNotApplied', 'Some lines were added without their unit of measure: {{lines}}', {
+            lines: linesWithoutUnit.join(', '),
+          }),
+          'warning',
+        )
       }
 
       try {
