@@ -37,6 +37,7 @@ export function useDiscrepancyDescriptions(): (description: string, foundValue?:
     'inbox_ops.discrepancy.desc.draft_reply_no_contact': t('inbox_ops.discrepancy.desc.draft_reply_no_contact', 'Draft reply target has no matching contact. Create the contact first.'),
     'inbox_ops.discrepancy.desc.duplicate_order_reference': t('inbox_ops.discrepancy.desc.duplicate_order_reference', 'An order with this customer reference already exists'),
     'inbox_ops.discrepancy.desc.unit_not_recognized': t('inbox_ops.discrepancy.desc.unit_not_recognized', 'Unit of measure not found in the units dictionary'),
+    'inbox_ops.discrepancy.desc.unit_not_applied': t('inbox_ops.discrepancy.desc.unit_not_applied', 'Unit of measure cannot be applied to this line; the line is created without it'),
   }
   return (description: string, foundValue?: string | null) => {
     const translated = translations[description]

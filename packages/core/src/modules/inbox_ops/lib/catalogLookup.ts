@@ -2,6 +2,7 @@ import type { EntityManager } from '@mikro-orm/postgresql'
 import type { EntityClass } from '@mikro-orm/core'
 import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import { createLogger } from '@open-mercato/shared/lib/logger'
+import { canonicalizeUnitCode } from '@open-mercato/shared/lib/units/unitCodes'
 
 const logger = createLogger('inbox_ops').child({ component: 'catalog-lookup' })
 
@@ -10,12 +11,14 @@ interface CatalogProductForExtraction {
   name: string
   sku?: string
   price?: string
+  baseUnit?: string
 }
 
 interface CatalogProductLike {
   id: string
   title: string
   sku?: string | null
+  defaultUnit?: string | null
   tenantId?: string
   organizationId?: string
   deletedAt?: Date | null
@@ -88,12 +91,16 @@ export async function fetchCatalogProductsForExtraction(
       }
     }
 
-    return products.map((product) => ({
-      id: product.id,
-      name: product.title,
-      sku: product.sku ?? undefined,
-      price: priceByProduct.get(product.id),
-    }))
+    return products.map((product) => {
+      const baseUnit = canonicalizeUnitCode(product.defaultUnit)
+      return {
+        id: product.id,
+        name: product.title,
+        sku: product.sku ?? undefined,
+        price: priceByProduct.get(product.id),
+        ...(baseUnit ? { baseUnit } : {}),
+      }
+    })
   } catch (err) {
     logger.error('Failed to fetch catalog products', { err })
     return []

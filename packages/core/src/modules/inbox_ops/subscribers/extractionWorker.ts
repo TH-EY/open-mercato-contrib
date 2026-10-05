@@ -4,12 +4,12 @@ import type { EntityClass } from '@mikro-orm/core'
 import { findOneWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import { InboxEmail, InboxProposal, InboxProposalAction, InboxDiscrepancy, InboxSettings } from '../data/entities'
 import type { ExtractedParticipant, InboxDiscrepancyType } from '../data/entities'
-import { extractionOutputSchema, LINE_UNIT_MAX_LENGTH, parseLineConfidence } from '../data/validators'
+import { extractionOutputSchema, parseLineConfidence } from '../data/validators'
 import { matchContacts } from '../lib/contactMatcher'
 import { buildExtractionSystemPrompt, buildExtractionUserPrompt } from '../lib/extractionPrompt'
 import { REQUIRED_FEATURES_MAP } from '../lib/constants'
 import { fetchCatalogProductsForExtraction } from '../lib/catalogLookup'
-import { fetchUnitsForExtraction, findUnitCode, type ExtractionUnit } from '../lib/unitLookup'
+import { applyLineUnits, fetchUnitsForExtraction } from '../lib/unitLookup'
 import { enrichOrderPayload } from '../lib/payloadEnrichment'
 import { validatePrices, type CatalogPricingServiceLike } from '../lib/priceValidator'
 import { extractParticipantsFromThread } from '../lib/emailParser'
@@ -274,20 +274,12 @@ export default async function handle(payload: EmailReceivedPayload, ctx: Resolve
 
     // Step 6b: Normalize + enrich order/quote payloads
     const enrichmentDiscrepancies: DiscrepancyInput[] = []
+    const productBaseUnits = new Map(catalogProducts.map((product) => [product.id, product.baseUnit ?? null]))
     for (const [actionIndex, action] of extractionResult.proposedActions.entries()) {
       if (action.actionType === 'create_order' || action.actionType === 'create_quote') {
         const parsedPayload = safeParsePayloadJson(action.payloadJson)
 
-        const unrecognizedUnits = normalizeOrderPayloadFields(parsedPayload, units)
-        for (const unit of unrecognizedUnits) {
-          enrichmentDiscrepancies.push({
-            actionIndex,
-            type: 'quantity_mismatch',
-            severity: 'error',
-            description: 'inbox_ops.discrepancy.desc.unit_not_recognized',
-            foundValue: unit,
-          })
-        }
+        normalizeOrderPayloadFields(parsedPayload)
 
         const { payload: enriched, warnings } = await enrichOrderPayload(parsedPayload, {
           em,
@@ -298,6 +290,21 @@ export default async function handle(payload: EmailReceivedPayload, ctx: Resolve
           salesChannelClass: entityClasses.salesChannel,
           customerAddressClass: entityClasses.customerAddress,
         })
+
+        const enrichedLineItems = Array.isArray(enriched.lineItems)
+          ? (enriched.lineItems as Record<string, unknown>[])
+          : []
+        for (const issue of applyLineUnits(enrichedLineItems, units, productBaseUnits)) {
+          enrichmentDiscrepancies.push({
+            actionIndex,
+            type: 'quantity_mismatch',
+            severity: issue.blocking ? 'error' : 'warning',
+            description: issue.blocking
+              ? 'inbox_ops.discrepancy.desc.unit_not_recognized'
+              : 'inbox_ops.discrepancy.desc.unit_not_applied',
+            foundValue: issue.unit,
+          })
+        }
 
         action.payloadJson = JSON.stringify(enriched)
 
@@ -633,11 +640,10 @@ export default async function handle(payload: EmailReceivedPayload, ctx: Resolve
   }
 }
 
-function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: ExtractionUnit[] | null): string[] {
+function normalizeOrderPayloadFields(payload: Record<string, unknown>): void {
   const lineItems = Array.isArray(payload.lineItems)
     ? (payload.lineItems as Record<string, unknown>[])
     : []
-  const unrecognizedUnits = new Map<string, string>()
   for (const item of lineItems) {
     if (!item.productName && typeof item.description === 'string') {
       item.productName = item.description
@@ -653,24 +659,6 @@ function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: Ex
       item.quantityUnit = item.unit
       delete item.unit
     }
-    const statedUnit = typeof item.quantityUnit === 'string' ? item.quantityUnit.trim() : ''
-    const tenantHasNoUnits = units !== null && units.length === 0
-    if (!statedUnit || tenantHasNoUnits) {
-      delete item.quantityUnit
-    } else {
-      const unitCode = units ? findUnitCode(statedUnit, units) : null
-      if (unitCode) {
-        item.quantityUnit = unitCode
-      } else if (statedUnit.length <= LINE_UNIT_MAX_LENGTH) {
-        item.quantityUnit = statedUnit
-      } else {
-        delete item.quantityUnit
-      }
-      const unitKey = statedUnit.toLowerCase()
-      if (units && !unitCode && !unrecognizedUnits.has(unitKey)) {
-        unrecognizedUnits.set(unitKey, statedUnit)
-      }
-    }
 
     const confidence = parseLineConfidence(item.confidence)
     if (confidence === undefined) {
@@ -679,7 +667,6 @@ function normalizeOrderPayloadFields(payload: Record<string, unknown>, units: Ex
       item.confidence = confidence
     }
   }
-  return Array.from(unrecognizedUnits.values())
 }
 
 function buildContactActionsForUnmatchedParticipants(

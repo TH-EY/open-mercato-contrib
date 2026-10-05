@@ -55,6 +55,7 @@
   "inbox_ops.discrepancy.desc.no_currency": "Nie mo\u017cna ustali\u0107 waluty dla tego zam\u00f3wienia. Ustaw kod waluty dla zam\u00f3wienia.",
   "inbox_ops.discrepancy.desc.no_matching_contact": "Nie znaleziono pasuj\u0105cego kontaktu",
   "inbox_ops.discrepancy.desc.product_not_matched": "Nie uda\u0142o si\u0119 dopasowa\u0107 produktu do katalogu",
+  "inbox_ops.discrepancy.desc.unit_not_applied": "Nie można zastosować jednostki miary do tej pozycji; pozycja zostanie utworzona bez niej",
   "inbox_ops.discrepancy.desc.unit_not_recognized": "Nie znaleziono jednostki miary w słowniku jednostek",
   "inbox_ops.discrepancy.expected": "Oczekiwano",
   "inbox_ops.discrepancy.found": "Znaleziono",

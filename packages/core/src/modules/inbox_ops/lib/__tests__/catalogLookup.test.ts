@@ -63,6 +63,22 @@ describe('fetchCatalogProductsForExtraction', () => {
     ])
   })
 
+  it('adds the canonical base unit of products that have one', async () => {
+    mockFindWithDecryption
+      .mockResolvedValueOnce([
+        { id: 'p-1', title: 'Cement', sku: 'CEM-25', defaultUnit: ' BAG ' },
+        { id: 'p-2', title: 'Shirt', sku: 'SH-1', defaultUnit: null },
+      ])
+      .mockResolvedValueOnce([])
+
+    const result = await fetchCatalogProductsForExtraction(mockEm, scope, deps)
+
+    expect(result).toEqual([
+      { id: 'p-1', name: 'Cement', sku: 'CEM-25', price: undefined, baseUnit: 'bag' },
+      { id: 'p-2', name: 'Shirt', sku: 'SH-1', price: undefined },
+    ])
+  })
+
   it('returns empty array when catalog is empty', async () => {
     mockFindWithDecryption.mockResolvedValueOnce([])
 

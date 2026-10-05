@@ -163,4 +163,22 @@ describe('ActionCard unit discrepancy', () => {
     expect(screen.getByText('Unit of measure not found in the units dictionary')).toBeInTheDocument()
     expect(screen.getByText(/Found: t$/)).toBeInTheDocument()
   })
+
+  it('describes a unit that is left off the line', () => {
+    renderWithProviders(
+      <CardWithResolvedDiscrepancies
+        discrepancies={[{
+          id: 'd-2',
+          type: 'quantity_mismatch',
+          severity: 'warning',
+          description: 'inbox_ops.discrepancy.desc.unit_not_applied',
+          foundValue: 'opak.',
+          resolved: false,
+          actionId: 'action-1',
+        }]}
+      />,
+    )
+    expect(screen.getByText('Unit of measure cannot be applied to this line; the line is created without it')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Accept/i })).toBeEnabled()
+  })
 })

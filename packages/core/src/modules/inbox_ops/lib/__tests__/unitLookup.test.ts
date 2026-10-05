@@ -1,6 +1,6 @@
 /** @jest-environment node */
 
-import { fetchUnitsForExtraction, findUnitCode, type ExtractionUnit } from '../unitLookup'
+import { applyLineUnits, fetchUnitsForExtraction, findUnitCode, type ExtractionUnit } from '../unitLookup'
 
 jest.mock('@open-mercato/shared/lib/logger', () => {
   const mocked = {
@@ -120,5 +120,89 @@ describe('findUnitCode', () => {
     expect(findUnitCode('  ', units)).toBeNull()
     expect(findUnitCode(5, units)).toBeNull()
     expect(findUnitCode(undefined, units)).toBeNull()
+  })
+})
+
+describe('applyLineUnits', () => {
+  const units: ExtractionUnit[] = [
+    { code: 'kg', normalizedCode: 'kg', label: 'Kilogram (weight)' },
+    { code: 'bag', normalizedCode: 'bag', label: 'Bag' },
+  ]
+  const soldInBags = 'product-bags'
+  const withoutUnits = 'product-plain'
+  const productBaseUnits = new Map<string, string | null>([[soldInBags, 'bag'], [withoutUnits, null]])
+
+  it('stores a recognized unit as its code on product and custom lines alike', () => {
+    const lines: Record<string, unknown>[] = [
+      { productName: 'Cement', productId: soldInBags, quantity: '10', quantityUnit: ' KG ' },
+      { productName: 'Delivery', quantity: '1', quantityUnit: 'Bag' },
+    ]
+    expect(applyLineUnits(lines, units, productBaseUnits)).toEqual([])
+    expect(lines.map((line) => line.quantityUnit)).toEqual(['kg', 'bag'])
+  })
+
+  it('blocks an unrecognized unit on a product sold in units and keeps it on the line', () => {
+    const lines: Record<string, unknown>[] = [{ productName: 'Cement', productId: soldInBags, quantity: '10', quantityUnit: 't' }]
+    expect(applyLineUnits(lines, units, productBaseUnits)).toEqual([{ unit: 't', blocking: true }])
+    expect(lines[0].quantityUnit).toBe('t')
+  })
+
+  it('drops an unrecognized unit from a custom line with a non-blocking issue', () => {
+    const lines: Record<string, unknown>[] = [{ productName: 'Sand', quantity: '2', quantityUnit: 't' }]
+    expect(applyLineUnits(lines, units, productBaseUnits)).toEqual([{ unit: 't', blocking: false }])
+    expect(lines[0]).not.toHaveProperty('quantityUnit')
+  })
+
+  it('drops any unit from a product without a base unit with a non-blocking issue', () => {
+    const lines: Record<string, unknown>[] = [
+      { productName: 'Shirt', productId: withoutUnits, quantity: '5', quantityUnit: 'kg' },
+      { productName: 'Shirt', productId: withoutUnits, quantity: '5', quantityUnit: 'opak.' },
+    ]
+    expect(applyLineUnits(lines, units, productBaseUnits)).toEqual([
+      { unit: 'kg', blocking: false },
+      { unit: 'opak.', blocking: false },
+    ])
+    expect(lines.every((line) => !('quantityUnit' in line))).toBe(true)
+  })
+
+  it('drops an over-long unrecognized unit but still blocks it on a product sold in units', () => {
+    const longUnit = 'bags of twenty-five kilograms each'
+    const lines: Record<string, unknown>[] = [{ productName: 'Cement', productId: soldInBags, quantity: '10', quantityUnit: longUnit }]
+    expect(applyLineUnits(lines, units, productBaseUnits)).toEqual([{ unit: longUnit, blocking: true }])
+    expect(lines[0]).not.toHaveProperty('quantityUnit')
+  })
+
+  it('reports each unit once per severity, ignoring case', () => {
+    const lines: Record<string, unknown>[] = [
+      { productName: 'Cement', productId: soldInBags, quantity: '1', quantityUnit: 'T' },
+      { productName: 'Cement', productId: soldInBags, quantity: '2', quantityUnit: 't' },
+      { productName: 'Sand', quantity: '3', quantityUnit: 't' },
+    ]
+    expect(applyLineUnits(lines, units, productBaseUnits)).toEqual([
+      { unit: 'T', blocking: true },
+      { unit: 't', blocking: false },
+    ])
+  })
+
+  it('keeps units as written without issues when the units could not be loaded', () => {
+    const lines: Record<string, unknown>[] = [
+      { productName: 'Cement', productId: soldInBags, quantity: '10', quantityUnit: ' Bags ' },
+      { productName: 'Sand', quantity: '2', quantityUnit: 'x'.repeat(26) },
+    ]
+    expect(applyLineUnits(lines, null, productBaseUnits)).toEqual([])
+    expect(lines[0].quantityUnit).toBe('Bags')
+    expect(lines[1]).not.toHaveProperty('quantityUnit')
+  })
+
+  it('leaves units off without issues when the tenant has no units of measure', () => {
+    const lines: Record<string, unknown>[] = [{ productName: 'Cement', productId: soldInBags, quantity: '10', quantityUnit: 'kg' }]
+    expect(applyLineUnits(lines, [], productBaseUnits)).toEqual([])
+    expect(lines[0]).not.toHaveProperty('quantityUnit')
+  })
+
+  it('removes a blank unit', () => {
+    const lines: Record<string, unknown>[] = [{ productName: 'Sand', quantity: '2', quantityUnit: '  ' }]
+    expect(applyLineUnits(lines, units, productBaseUnits)).toEqual([])
+    expect(lines[0]).not.toHaveProperty('quantityUnit')
   })
 })

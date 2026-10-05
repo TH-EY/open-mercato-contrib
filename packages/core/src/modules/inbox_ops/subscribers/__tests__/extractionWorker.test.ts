@@ -781,12 +781,29 @@ describe('extractionWorker', () => {
       expect(buildExtractionSystemPrompt).toHaveBeenLastCalledWith([], [], undefined, 'en', undefined, tenantUnits)
     })
 
-    it('stores recognized units as their code, keeps unknown units as written and flags each unknown unit once', async () => {
+    const cementId = '22222222-2222-4222-8222-222222222222'
+    const shirtId = '33333333-3333-4333-8333-333333333333'
+    const catalogWithUnits = [
+      { id: cementId, name: 'Cement', sku: 'CEM-25', baseUnit: 'bag' },
+      { id: shirtId, name: 'Shirt', sku: 'SH-1' },
+    ]
+
+    function unitDiscrepancies() {
+      return createdDiscrepancies('quantity_mismatch').map((d) => ({
+        foundValue: d.foundValue,
+        severity: d.severity,
+        description: d.description,
+      }))
+    }
+
+    it('blocks only units that would change the quantity of a product sold in units', async () => {
       mockFetchUnits.mockResolvedValueOnce(tenantUnits)
+      mockFetchCatalog.mockResolvedValueOnce(catalogWithUnits)
       mockOrderExtraction([
         { productName: 'Cement', quantity: '10', quantityUnit: ' KG ', confidence: '0.8' },
-        { productName: 'Sand', quantity: '2', unit: 't', confidence: 1.7 },
-        { productName: 'Gravel', quantity: '1', quantityUnit: 't', confidence: 0.4 },
+        { productName: 'Cement', quantity: '2', unit: 't', confidence: 1.7 },
+        { productName: 'Shirt', quantity: '5', quantityUnit: 'kg' },
+        { productName: 'Gravel', quantity: '1', quantityUnit: 'T', confidence: 0.4 },
         { productName: 'Nails', quantity: '100', quantityUnit: '   ', confidence: 'high' },
       ])
 
@@ -794,41 +811,44 @@ describe('extractionWorker', () => {
 
       const action = createdOrderAction()
       const lines = (action.payload as { lineItems: Record<string, unknown>[] }).lineItems
-      expect(lines[0]).toEqual(expect.objectContaining({ quantityUnit: 'kg', confidence: 0.8 }))
-      expect(lines[1]).toEqual(expect.objectContaining({ quantityUnit: 't' }))
+      expect(lines[0]).toEqual(expect.objectContaining({ productId: cementId, quantityUnit: 'kg', confidence: 0.8 }))
+      expect(lines[1]).toEqual(expect.objectContaining({ productId: cementId, quantityUnit: 't' }))
       expect(lines[1]).not.toHaveProperty('unit')
       expect(lines[1]).not.toHaveProperty('confidence')
-      expect(lines[2]).toEqual(expect.objectContaining({ quantityUnit: 't', confidence: 0.4 }))
+      expect(lines[2]).toEqual(expect.objectContaining({ productId: shirtId }))
+      expect(lines[2]).not.toHaveProperty('quantityUnit')
       expect(lines[3]).not.toHaveProperty('quantityUnit')
-      expect(lines[3]).not.toHaveProperty('confidence')
+      expect(lines[3].confidence).toBe(0.4)
+      expect(lines[4]).not.toHaveProperty('quantityUnit')
+      expect(lines[4]).not.toHaveProperty('confidence')
 
-      const unitDiscrepancies = createdDiscrepancies('quantity_mismatch')
-      expect(unitDiscrepancies).toHaveLength(1)
-      expect(unitDiscrepancies[0]).toEqual(expect.objectContaining({
-        severity: 'error',
-        description: 'inbox_ops.discrepancy.desc.unit_not_recognized',
-        foundValue: 't',
-        actionId: action.id,
-      }))
+      expect(unitDiscrepancies()).toEqual([
+        { foundValue: 't', severity: 'error', description: 'inbox_ops.discrepancy.desc.unit_not_recognized' },
+        { foundValue: 'kg', severity: 'warning', description: 'inbox_ops.discrepancy.desc.unit_not_applied' },
+        { foundValue: 'T', severity: 'warning', description: 'inbox_ops.discrepancy.desc.unit_not_applied' },
+      ])
+      expect(createdDiscrepancies('quantity_mismatch').every((d) => d.actionId === action.id)).toBe(true)
     })
 
-    it('flags units case-insensitively once, reads a unit key sent next to a null quantityUnit, and drops an over-long unit', async () => {
+    it('reads a unit key sent next to a null quantityUnit and blocks an over-long unit on a product sold in units', async () => {
       mockFetchUnits.mockResolvedValueOnce(tenantUnits)
+      mockFetchCatalog.mockResolvedValueOnce(catalogWithUnits)
       const longUnit = 'bags of twenty-five kilograms each'
       mockOrderExtraction([
-        { productName: 'Cement', quantity: '10', quantityUnit: 'Bags' },
-        { productName: 'Lime', quantity: '4', quantityUnit: null, unit: 'bags' },
-        { productName: 'Mortar', quantity: '2', quantityUnit: longUnit },
+        { productName: 'Cement', quantity: '4', quantityUnit: null, unit: 'bag' },
+        { productName: 'Cement', quantity: '2', quantityUnit: longUnit },
       ])
 
       await handle(basePayload, mockCtx as any)
 
       const lines = (createdOrderAction().payload as { lineItems: Record<string, unknown>[] }).lineItems
-      expect(lines[0].quantityUnit).toBe('Bags')
-      expect(lines[1].quantityUnit).toBe('bags')
-      expect(lines[1]).not.toHaveProperty('unit')
-      expect(lines[2]).not.toHaveProperty('quantityUnit')
-      expect(createdDiscrepancies('quantity_mismatch').map((d) => d.foundValue)).toEqual(['Bags', longUnit])
+      expect(lines[0].quantityUnit).toBe('bag')
+      expect(lines[0]).not.toHaveProperty('unit')
+      expect(lines[1]).not.toHaveProperty('quantityUnit')
+      expect(unitDiscrepancies()).toEqual([
+        { foundValue: 'bag', severity: 'error', description: 'inbox_ops.discrepancy.desc.unit_not_recognized' },
+        { foundValue: longUnit, severity: 'error', description: 'inbox_ops.discrepancy.desc.unit_not_recognized' },
+      ])
     })
 
     it('keeps units as written without flagging them when the units cannot be loaded', async () => {
