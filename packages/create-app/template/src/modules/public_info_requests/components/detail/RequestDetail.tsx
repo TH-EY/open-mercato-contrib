@@ -112,7 +112,7 @@ export default function RequestDetail({ id }: { id: string }) {
           <h1 className="text-xl font-semibold sm:text-2xl"><span className="font-mono">{request.caseNumber}</span> — {request.subjectSummary}</h1>
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge variant={STATUS_VARIANT[request.status] ?? 'neutral'} dot>{t(`public_info_requests.status.${request.status}`, STATUS_FALLBACK[request.status] ?? request.status)}</StatusBadge>
-            {request.source === 'import' ? <StatusBadge variant="neutral">{t('public_info_requests.detail.archived', 'archive')}</StatusBadge> : null}
+            {request.source === 'import' ? <StatusBadge variant="neutral">{t('public_info_requests.detail.archived', 'knowledge base')}</StatusBadge> : null}
           </div>
         </div>
         {!closed && request.source !== 'import' ? (

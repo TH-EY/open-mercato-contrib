@@ -219,7 +219,7 @@ export default function DraftPanel({ detail, run, pending }: Props) {
                     </p>
                   )}
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                    {paragraph.sources.map((source, index) => <span key={index} className="rounded-sm border bg-muted px-1.5 py-0.5 font-mono text-muted-foreground" title={source.quote}>{detail.documents.find((document) => document.id === source.attachmentId)?.fileName ?? t('public_info_requests.draft.archiveSource', 'archive')}</span>)}
+                    {paragraph.sources.map((source, index) => <span key={index} className="rounded-sm border bg-muted px-1.5 py-0.5 font-mono text-muted-foreground" title={source.quote}>{detail.documents.find((document) => document.id === source.attachmentId)?.fileName ?? t('public_info_requests.draft.archiveSource', 'knowledge base')}</span>)}
                     {paragraph.flags.map((flag) => <StatusBadge key={flag} variant={flag === 'gap' || flag === 'number_mismatch' ? 'error' : 'warning'}>{t(`public_info_requests.flag.${flag}`, flag)}{flag === 'number_mismatch' && paragraph.mismatchTokens?.length ? `: ${paragraph.mismatchTokens.join(', ')}` : ''}</StatusBadge>)}
                     {paragraph.confirmedBy ? <StatusBadge variant="success">{t('public_info_requests.draft.confirmedBadge', 'confirmed')}</StatusBadge> : null}
                     {paragraph.kind !== 'closing' ? (

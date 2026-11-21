@@ -43,7 +43,7 @@ export default function ArchiveSearch() {
   return (
     <div className="space-y-4" data-testid="udip-archive">
       <div>
-        <h1 className="text-xl font-semibold sm:text-2xl">{t('public_info_requests.archive.title', 'Answer archive')}</h1>
+        <h1 className="text-xl font-semibold sm:text-2xl">{t('public_info_requests.archive.title', 'Answer knowledge base')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t('public_info_requests.archive.subtitle', 'Anonymised past requests and answers — search by meaning, not exact words.')}</p>
       </div>
       <div className="flex gap-2">

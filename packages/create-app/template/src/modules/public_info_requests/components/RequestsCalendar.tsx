@@ -277,7 +277,7 @@ export default function RequestsCalendar() {
                     <TableCell className="text-right tabular-nums">{index + 1}</TableCell>
                     <TableCell className="whitespace-nowrap font-mono text-xs">
                       {item.caseNumber}
-                      {item.source === 'import' ? <StatusBadge variant="neutral" className="ml-2 font-sans">{t('public_info_requests.detail.archived', 'archive')}</StatusBadge> : null}
+                      {item.source === 'import' ? <StatusBadge variant="neutral" className="ml-2 font-sans">{t('public_info_requests.detail.archived', 'knowledge base')}</StatusBadge> : null}
                     </TableCell>
                     <TableCell className="max-w-48 truncate">{item.requesterName ?? '—'}</TableCell>
                     <TableCell className="max-w-72 truncate" title={item.subjectSummary}>{item.subjectSummary}</TableCell>

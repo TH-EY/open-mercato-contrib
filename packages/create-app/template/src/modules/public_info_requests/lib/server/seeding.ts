@@ -234,7 +234,7 @@ export async function importArchive(
         channel: 'email',
         receivedAt,
         letterDate: parsed.letterDate,
-        requesterName: parsed.requesterName ?? 'Wnioskodawca (archiwum)',
+        requesterName: parsed.requesterName ?? 'Wnioskodawca (baza wiedzy)',
         requesterKind: parsed.requesterKind,
         requesterAddress: parsed.requesterAddress,
         requesterContact: parsed.requesterContact,
