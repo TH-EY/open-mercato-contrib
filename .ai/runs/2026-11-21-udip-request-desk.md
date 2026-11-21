@@ -44,47 +44,49 @@ sign-off workflow, visual PDF redaction, law versioning, notifications, statisti
 
 ## Progress
 
+PR: #9 (TH-EY/open-mercato-contrib)
+
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
 ### Phase 1: Register and calendar
 
-- [ ] 1.1 Module scaffold, entities, validators, ACL, migration
-- [ ] 1.2 Deadline engine with Polish holidays and unit tests
-- [ ] 1.3 Request/department/settings APIs, case number, deadline preview, calendar feed
-- [ ] 1.4 Calendar list + month view, create form, case detail page
-- [ ] 1.5 Seeds: departments, settings, partition, demo calendar CLI
+- [x] 1.1 Module scaffold, entities, validators, ACL, migration — a7942cb5ea
+- [x] 1.2 Deadline engine with Polish holidays and unit tests — a7942cb5ea
+- [x] 1.3 Request/department/settings APIs, case number, deadline preview, calendar feed — a7942cb5ea
+- [x] 1.4 Calendar list + month view, create form, case detail page — 6d968000c4
+- [x] 1.5 Seeds: departments, settings, partition, demo calendar CLI — a7942cb5ea
 
 ### Phase 2: Intake
 
-- [ ] 2.1 Attachment upload, text extraction and local OCR fallback
-- [ ] 2.2 Intake extraction (heuristic parser + AI agent) and suggestion UI
+- [x] 2.1 Attachment upload, text extraction and local OCR fallback — a7942cb5ea
+- [x] 2.2 Intake extraction (heuristic parser + AI agent) and suggestion UI — a7942cb5ea
 
 ### Phase 3: Archive and similar requests
 
-- [ ] 3.1 PII rules and anonymised archive text
-- [ ] 3.2 Archive import CLI, search indexing and similar-request API
-- [ ] 3.3 Similar-request step and archive search page
+- [x] 3.1 PII rules and anonymised archive text — a7942cb5ea
+- [x] 3.2 Archive import CLI, search indexing and similar-request API — a7942cb5ea
+- [x] 3.3 Similar-request step and archive search page — 6d968000c4
 
 ### Phase 4: Routing and department replies
 
-- [ ] 4.1 Department queries, routing proposal (keywords + archive + AI), notes, mark-sent
-- [ ] 4.2 Routing page and department reply upload
+- [x] 4.1 Department queries, routing proposal (keywords + archive + AI), notes, mark-sent — a7942cb5ea
+- [x] 4.2 Routing page and department reply upload — 6d968000c4
 
 ### Phase 5: Draft and grounding
 
-- [ ] 5.1 Letter templates, drafting service (template + AI) and grounding check
-- [ ] 5.2 Draft editor page
+- [x] 5.1 Letter templates, drafting service (template + AI) and grounding check — a7942cb5ea
+- [x] 5.2 Draft editor page — 6d968000c4
 
 ### Phase 6: Anonymisation and export
 
-- [ ] 6.1 Redaction marks, detection, decisions
-- [ ] 6.2 Export (DOCX/PDF/TXT) with burn-in and mark-sent with archive snapshot
-- [ ] 6.3 Anonymisation tab and export dialog
+- [x] 6.1 Redaction marks, detection, decisions — a7942cb5ea
+- [x] 6.2 Export (DOCX/PDF/TXT) with burn-in and mark-sent with archive snapshot — a7942cb5ea
+- [x] 6.3 Anonymisation tab and export dialog — 6d968000c4
 
 ### Phase 7: Extension and clarification
 
-- [ ] 7.1 Extend / clarification actions and dialogs
+- [x] 7.1 Extend / clarification actions and dialogs — a7942cb5ea
 
 ### Phase 8: Sample-document verification
 
-- [ ] 8.1 Verification script and integration test over all 10 UMB samples
+- [x] 8.1 Verification script and integration test over all 10 UMB samples — a7942cb5ea, 6d968000c4
