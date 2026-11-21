@@ -158,3 +158,25 @@ describe('findLetterDate', () => {
     expect(findLetterDate('pismo z 03.02.2026 r.')).toBe('2026-02-03')
   })
 })
+
+describe('requester recognition', () => {
+  const flattened590 = 'WNIOSEK O UDOSTĘPNIENIE INFORMACJI PUBLICZNEJ Na podstawie art. 2 ust. 1 i art. 10 ust. 1 ustawy z dnia 6 września 2001 r. o dostępie do informacji publicznej (Dz. U. z 2016 r. poz. 1764 ze zm.) proszę o udostępnienie informacji dotyczącej Państwa inwestycji pn. „Budowa kompleksu Astoria” w następującym zakresie: 1. Proszę o informację czy Pan Adam Wiśniewski pełnił funkcję Kierownika robót teletechnicznych ze wskazaniem terminu pełnienia funkcji. Budowlanka S.A.'
+
+  it('finds a company with its legal form in text without line breaks', () => {
+    const result = parseRequestText(flattened590, { channel: 'email' })
+    expect(result.requesterName).toBe('Budowlanka S.A.')
+    expect(result.requesterKind).toBe('organisation')
+  })
+
+  it('does not take the person asked about for the requester', () => {
+    const result = parseRequestText(flattened590, { channel: 'email' })
+    expect(result.requesterName).not.toContain('Wiśniewski')
+  })
+
+  it('keeps multi-word company names and limited-liability forms', () => {
+    const result = parseRequestText('Proszę o udostępnienie umowy nr 41/2025 zawartej z miastem. Z poważaniem, Przedsiębiorstwo Usług Komunalnych Eko sp. z o.o.', { channel: 'email' })
+    expect(result.requesterName).toBe('Przedsiębiorstwo Usług Komunalnych Eko sp. z o.o.')
+    expect(result.requesterKind).toBe('organisation')
+  })
+})
+

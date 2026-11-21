@@ -592,7 +592,22 @@ function guessFromHeader(lines: string[]): RequesterGuess {
   return { name: null, kind: null, address: null }
 }
 
+const COMPANY_WITH_LEGAL_FORM = /((?:[„"]?[\p{Lu}][\p{L}\d&'’.\-]*[”"]?\s+){1,5}?)(S\.\s?A\.|[Ss]p\.\s?z\s?o\.\s?o\.|[Ss]p\.\s?j\.|[Ss]p\.\s?k\.|s\.\s?c\.)/gu
+const COMPANY_LEADING_NOISE = /^(?:(?:W|Z|Do|Od|Dla|Przez|Firma|Spółka|Szanowni|Szanowny|Państwo|Pan|Pani)\s+)+/u
+
+function companyNamedIn(body: string): string | null {
+  const flattened = body.replace(/\s+/g, ' ')
+  const matches = Array.from(flattened.matchAll(COMPANY_WITH_LEGAL_FORM))
+  for (const match of matches.reverse()) {
+    const name = cleanWhitespace(`${match[1].replace(COMPANY_LEADING_NOISE, '')}${match[2]}`)
+    if (wordCount(name) >= 2 && !/^(?:Dz|U)\b/.test(name)) return name
+  }
+  return null
+}
+
 function guessFromBody(body: string): RequesterGuess {
+  const company = companyNamedIn(body)
+  if (company) return { name: company, kind: 'organisation', address: null }
   const organisation = body.match(/(?:^|[.!?]\s+|\n)((?:Stowarzyszenie|Fundacja|Parafia|Towarzystwo|Spółdzielnia|Związek|Klub|Instytut|Kancelaria|Redakcja|Wspólnota|Komitet|Rada Osiedla)\b[^,.;:\n]{0,80}?)(?=,|\s+(?:zwraca|zwracaj|wnosi|prosi|uprzejmie|działając))/u)
   if (organisation) {
     const candidate = cleanWhitespace(organisation[1])
