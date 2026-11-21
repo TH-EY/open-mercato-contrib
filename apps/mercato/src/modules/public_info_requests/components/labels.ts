@@ -10,6 +10,7 @@ export const STATUS_VARIANT: Record<string, StatusBadgeVariant> = {
   prepared: 'success',
   sent: 'success',
   left_unprocessed: 'neutral',
+  archived: 'neutral',
 }
 
 export const STATUS_FALLBACK: Record<string, string> = {
@@ -21,6 +22,7 @@ export const STATUS_FALLBACK: Record<string, string> = {
   prepared: 'Answer prepared',
   sent: 'Answer sent',
   left_unprocessed: 'Left unprocessed',
+  archived: 'Archived (withdrawn)',
 }
 
 export const TONE_ROW_CLASS: Record<DeadlineTone, string> = {

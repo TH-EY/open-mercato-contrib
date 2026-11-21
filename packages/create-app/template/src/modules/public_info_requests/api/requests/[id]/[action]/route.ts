@@ -55,6 +55,8 @@ const POST_COMMANDS: Record<string, string> = {
   'leave-unprocessed': 'public_info_requests.request.leave_unprocessed',
   assign: 'public_info_requests.request.assign',
   claim: 'public_info_requests.request.claim',
+  archive: 'public_info_requests.request.archive',
+  restore: 'public_info_requests.request.restore',
 }
 
 async function readParams(ctx: RouteParams): Promise<Params> {

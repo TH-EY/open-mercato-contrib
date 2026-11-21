@@ -23,6 +23,7 @@ export async function GET(req: Request) {
         organizationId: routeContext.organizationId,
         deletedAt: null,
         source: 'manual',
+        status: { $ne: 'archived' },
         currentDueDate: { $gte: query.from, $lte: query.to },
       },
       { fields: ['id', 'caseNumber', 'caseSeq', 'subjectSummary', 'currentDueDate', 'status', 'assigneeUserId', 'dueShiftedFrom'], orderBy: { currentDueDate: 'asc' }, limit: 500 },

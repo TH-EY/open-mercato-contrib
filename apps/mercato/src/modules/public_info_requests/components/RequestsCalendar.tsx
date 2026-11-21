@@ -22,7 +22,7 @@ import { STATUS_FALLBACK, STATUS_VARIANT, TONE_ROW_CLASS, TONE_VARIANT } from '.
 type ListResponse = { items: RequestListItem[]; total: number }
 type CalendarResponse = { items: Array<{ id: string; caseNumber: string; caseSeq: number; subjectSummary: string; currentDueDate: string; deadlineTone: RequestListItem['deadlineTone']; assigneeInitials: string | null }> }
 
-const STATUS_FILTERS = ['all', 'new', 'sent_to_departments', 'extended', 'awaiting_clarification', 'in_preparation', 'prepared', 'sent', 'left_unprocessed']
+const STATUS_FILTERS = ['all', 'new', 'sent_to_departments', 'extended', 'awaiting_clarification', 'in_preparation', 'prepared', 'sent', 'left_unprocessed', 'archived']
 
 function monthRange(anchor: Date): ScheduleRange {
   const start = new Date(anchor.getFullYear(), anchor.getMonth(), 1)

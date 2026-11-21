@@ -108,7 +108,11 @@ async function archiveCandidates(em: EntityManager, scope: Scope, settings: Publ
       limit: 2000,
     },
   )
-  return rows.filter((row) => row.status === 'sent' || row.source === 'import')
+  return rows.filter(isArchiveEntry)
+}
+
+function isArchiveEntry(row: { status: string; source: string }): boolean {
+  return row.status !== 'archived' && (row.status === 'sent' || row.source === 'import')
 }
 
 export async function findSimilarRequests(
@@ -182,7 +186,7 @@ export async function listArchivedRequests(em: EntityManager, scope: Scope, limi
       limit: 2000,
     },
   )
-  const archived = rows.filter((row) => row.status === 'sent' || row.source === 'import')
+  const archived = rows.filter(isArchiveEntry)
   const departments = archived.length > 0 ? await loadDepartments(em, scope, false) : []
   const matches: SimilarMatch[] = archived.slice(0, limit).map((row) => ({
     requestId: row.id,

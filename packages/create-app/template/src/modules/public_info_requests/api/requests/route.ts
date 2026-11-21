@@ -143,6 +143,7 @@ export const { metadata, GET, POST, PUT, DELETE } = makeCrudRoute({
       const statuses = query.status ? query.status.split(',').map((value) => value.trim()).filter(Boolean) : []
       if (statuses.length > 0) target.status = { $in: statuses }
       else if (query.hideClosed === 'true' && !isSingleRecord(query)) target.status = { $in: OPEN_STATUSES }
+      else if (!isSingleRecord(query)) target.status = { $ne: 'archived' }
       if (query.assigneeUserId) target.assignee_user_id = query.assigneeUserId
       if (parseBooleanToken(query.mine ?? null) === true && ctx.auth?.sub) target.assignee_user_id = String(ctx.auth.sub)
       else if (parseBooleanToken(query.unassigned ?? null) === true) target.assignee_user_id = { $exists: false }

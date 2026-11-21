@@ -6,6 +6,7 @@ import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import {
   PublicInfoDepartmentQuery,
   PublicInfoRequest,
+  PublicInfoRequestEvent,
   PublicInfoRedactionMark,
   PublicInfoResponseDraft,
   type PublicInfoRequestStatus,
@@ -47,6 +48,7 @@ import { assertAssignable } from '../lib/server/users'
 import { defineRequestCommand, snapshotRow, type ChildRowSnapshot, type CreatedRow } from './shared'
 
 const OPEN_STATUSES: PublicInfoRequestStatus[] = ['new', 'sent_to_departments', 'extended', 'in_preparation', 'prepared']
+const ARCHIVABLE_STATUSES: PublicInfoRequestStatus[] = ['new', 'sent_to_departments', 'extended', 'awaiting_clarification', 'in_preparation', 'prepared']
 const EXTENDABLE_STATUSES: PublicInfoRequestStatus[] = ['new', 'sent_to_departments', 'in_preparation', 'prepared']
 
 async function loadDraftMarks(em: EntityManager, scope: { tenantId: string; organizationId: string }, draftId: string): Promise<PublicInfoRedactionMark[]> {
@@ -569,7 +571,7 @@ defineRequestCommand({
     const draft = input.draftId
       ? await em.findOne(PublicInfoResponseDraft, { id: input.draftId, requestId: request.id, tenantId: scope.tenantId, organizationId: scope.organizationId })
       : await em.findOne(PublicInfoResponseDraft, { requestId: request.id, tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null }, { orderBy: { version: 'desc' } })
-    if (request.status === 'sent' || request.status === 'left_unprocessed') {
+    if (request.status === 'sent' || request.status === 'left_unprocessed' || request.status === 'archived') {
       throw new CrudHttpError(409, { error: 'Request is already closed', code: 'request_closed' })
     }
     if (!draft) throw new CrudHttpError(409, { error: 'No prepared draft', code: 'draft_not_ready' })
@@ -598,6 +600,40 @@ defineRequestCommand({
 })
 
 defineRequestCommand({
+  id: 'public_info_requests.request.archive',
+  label: 'Archive request',
+  schema: withId({ reason: z.string().trim().min(1).max(1000) }),
+  async run({ em, scope, request, input, actorUserId }) {
+    if (!ARCHIVABLE_STATUSES.includes(request.status) || request.source === 'import') {
+      throw new CrudHttpError(409, { error: 'Only unfinished requests can be archived', code: 'invalid_status', status: request.status })
+    }
+    const previousStatus = request.status
+    transitionStatus(em, scope, request, 'archived', actorUserId)
+    recordEvent(em, scope, request.id, 'archived', actorUserId, { reason: input.reason, previousStatus })
+    return { result: { ok: true } }
+  },
+})
+
+defineRequestCommand({
+  id: 'public_info_requests.request.restore',
+  label: 'Restore archived request',
+  schema: withId({}),
+  async run({ em, scope, request, actorUserId }) {
+    if (request.status !== 'archived') throw new CrudHttpError(409, { error: 'Request is not archived', code: 'invalid_status', status: request.status })
+    const archivedEvent = await em.findOne(
+      PublicInfoRequestEvent,
+      { requestId: request.id, kind: 'archived', tenantId: scope.tenantId, organizationId: scope.organizationId },
+      { orderBy: { occurredAt: 'desc' } },
+    )
+    const stored = archivedEvent?.payload?.previousStatus
+    const previousStatus = typeof stored === 'string' && (ARCHIVABLE_STATUSES as string[]).includes(stored) ? (stored as PublicInfoRequestStatus) : 'new'
+    transitionStatus(em, scope, request, previousStatus, actorUserId)
+    recordEvent(em, scope, request.id, 'restored', actorUserId, { status: previousStatus })
+    return { result: { ok: true, status: previousStatus } }
+  },
+})
+
+defineRequestCommand({
   id: 'public_info_requests.request.assign',
   label: 'Assign request',
   schema: withId({ assigneeUserId: z.string().uuid().nullable() }),
@@ -606,6 +642,7 @@ defineRequestCommand({
     return undefined
   },
   async run({ em, scope, request, input, actorUserId }) {
+    if (request.status === 'archived') throw new CrudHttpError(409, { error: 'Request is archived', code: 'request_archived' })
     const previous = request.assigneeUserId ?? null
     request.assigneeUserId = input.assigneeUserId
     recordEvent(em, scope, request.id, 'assigned', actorUserId, { assigneeUserId: input.assigneeUserId, previousAssigneeUserId: previous })
@@ -623,6 +660,7 @@ defineRequestCommand({
     return undefined
   },
   async run({ em, scope, request, actorUserId }) {
+    if (request.status === 'archived') throw new CrudHttpError(409, { error: 'Request is archived', code: 'request_archived' })
     if (request.assigneeUserId && request.assigneeUserId !== actorUserId) {
       throw new CrudHttpError(409, { error: 'Request is already assigned to someone else', code: 'already_assigned' })
     }

@@ -16,6 +16,7 @@ export const requestStatusSchema = z.enum([
   'prepared',
   'sent',
   'left_unprocessed',
+  'archived',
 ])
 export const departmentKindSchema = z.enum(['department', 'office', 'municipal_unit', 'external'])
 export const replyKindSchema = z.enum(['answered', 'partial', 'not_held', 'protected'])

@@ -9,6 +9,7 @@ export type PublicInfoRequestStatus =
   | 'prepared'
   | 'sent'
   | 'left_unprocessed'
+  | 'archived'
 
 export type PublicInfoChannel = 'email' | 'epuap' | 'post' | 'in_person' | 'phone'
 export type PublicInfoRequesterKind = 'person' | 'organisation' | 'media' | 'councillor'
