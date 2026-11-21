@@ -98,6 +98,18 @@ async function main() {
     await page.waitForTimeout(3000)
     await shot('11-anonymisation-accepted')
   }
+  for (let guard = 0; guard < 20; guard += 1) {
+    const confirm = page.getByRole('button', { name: /^Potwierdzam$|^I confirm$/ }).first()
+    if (!(await confirm.count())) break
+    await confirm.click()
+    await page.waitForTimeout(1500)
+  }
+  const markReady = page.getByRole('button', { name: /Oznacz jako przygotowany|Mark as prepared/ })
+  if (await markReady.count()) {
+    await markReady.click()
+    await page.waitForTimeout(2500)
+    await shot('11b-draft-prepared')
+  }
   await page.getByRole('tab', { name: /Historia|History/ }).click()
   await shot('12-history')
 

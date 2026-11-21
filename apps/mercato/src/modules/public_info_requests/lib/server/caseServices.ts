@@ -364,7 +364,7 @@ export async function generateDraftParagraphs(params: {
   letterType: LetterType
   context: LetterContext
   replies: ReplyText[]
-  archiveAnswer?: { documentId: string; text: string } | null
+  archiveAnswer?: { documentId: string; text: string; caseNumber?: string; departmentName?: string | null } | null
 }): Promise<{ paragraphs: DraftParagraph[]; generatedBy: 'ai' | 'template' }> {
   const { letterType, context, replies } = params
   const sourceTexts = [
@@ -408,7 +408,7 @@ export async function generateDraftParagraphs(params: {
     }
   }
   const archiveReplies: ReplyText[] = params.archiveAnswer
-    ? [{ attachmentId: params.archiveAnswer.documentId, departmentName: '', text: params.archiveAnswer.text, pointPositions: context.points.map((point) => point.position) }]
+    ? [{ attachmentId: params.archiveAnswer.documentId, departmentName: params.archiveAnswer.departmentName ?? '', text: params.archiveAnswer.text, pointPositions: context.points.map((point) => point.position) }]
     : []
   const effectiveReplies = replies.length > 0 ? replies : archiveReplies
   if (!paragraphs) {
@@ -416,12 +416,14 @@ export async function generateDraftParagraphs(params: {
       ? draftFromReplies(letterType, context, effectiveReplies)
       : buildTemplateParagraphs(letterType, context)
   }
-  paragraphs = fillAttachmentReferences(paragraphs, effectiveReplies, replies.length === 0 && archiveReplies.length > 0)
+  const archiveSource = replies.length === 0 && params.archiveAnswer ? { caseNumber: params.archiveAnswer.caseNumber ?? null } : null
+  paragraphs = fillAttachmentReferences(paragraphs, effectiveReplies, archiveSource)
   const grounded = checkGrounding(paragraphs, context, sourceTexts)
   return { paragraphs: grounded, generatedBy }
 }
 
-function fillAttachmentReferences(paragraphs: DraftParagraph[], replies: ReplyText[], fromArchive: boolean): DraftParagraph[] {
+function fillAttachmentReferences(paragraphs: DraftParagraph[], replies: ReplyText[], archiveSource: { caseNumber: string | null } | null): DraftParagraph[] {
+  const fromArchive = archiveSource !== null
   return paragraphs.map((paragraph) => {
     if (paragraph.kind === 'point' && paragraph.text.trim().length > 0) {
       return fromArchive && !paragraph.flags.includes('assistant_only') ? { ...paragraph, flags: [...paragraph.flags, 'assistant_only'] } : paragraph
@@ -430,8 +432,10 @@ function fillAttachmentReferences(paragraphs: DraftParagraph[], replies: ReplyTe
     const position = paragraph.pointPosition
     const reply = replies.find((candidate) => candidate.pointPositions.length === 0 || candidate.pointPositions.includes(position)) ?? replies[0]
     if (!reply) return paragraph
-    const department = reply.departmentName ? reply.departmentName.replace(/^Wydział/, 'Wydział') : 'komórka merytoryczna'
-    const text = `Ad ${position}\nInformację w zakresie pytania nr ${position} zawiera załączony materiał przygotowany przez: ${department}.`
+    const department = reply.departmentName || 'komórka merytoryczna'
+    const text = archiveSource
+      ? `Ad ${position}\nInformację w zakresie pytania nr ${position} przygotowano na podstawie materiału przekazanego przez: ${department} w sprawie ${archiveSource.caseNumber ?? 'rozpatrzonej wcześniej'}. Materiał stanowi załącznik do niniejszej odpowiedzi.`
+      : `Ad ${position}\nInformację w zakresie pytania nr ${position} zawiera załączony materiał przygotowany przez: ${department}.`
     return {
       ...paragraph,
       text,

@@ -178,6 +178,12 @@ function archiveAnswerText(archiveText: string | null | undefined): string {
   return (marker >= 0 ? archiveText.slice(marker + 'ODPOWIEDŹ'.length) : archiveText).trim()
 }
 
+function archiveDepartmentName(answer: string): string | null {
+  const normalized = answer.replace(/\s+/g, ' ')
+  const match = /tj\. ((?:Wydział|Biuro|Zarząd|Miejsk)[^,.;]*?) (?:Urzędu Miasta|UMB\b)/u.exec(normalized)
+  return match ? match[1].trim() : null
+}
+
 type GeneratedDraft = Awaited<ReturnType<typeof generateDraftParagraphs>> & {
   letterOptions: Record<string, unknown>
   attachmentList: string[]
@@ -191,7 +197,7 @@ defineRequestCommand<z.infer<ReturnType<typeof draftGenerateInput>>, { draftId: 
     const settings = await loadSettings(em, scope)
     const points = await requestPointsOrSummary(em, scope, request)
     const { replies, departmentNames } = await loadReplyTexts(em, scope, request.id)
-    let archiveAnswer: { documentId: string; text: string } | null = null
+    let archiveAnswer: { documentId: string; text: string; caseNumber?: string; departmentName?: string | null } | null = null
     if (input.baseOn === 'archive_answer' && request.similarChoice?.matchedRequestId) {
       const matched = await em.findOne(PublicInfoRequest, {
         id: request.similarChoice.matchedRequestId,
@@ -200,10 +206,11 @@ defineRequestCommand<z.infer<ReturnType<typeof draftGenerateInput>>, { draftId: 
         deletedAt: null,
       })
       const text = archiveAnswerText(matched?.archiveText)
-      if (matched && text) archiveAnswer = { documentId: `archive:${matched.id}`, text }
+      if (matched && text) archiveAnswer = { documentId: `archive:${matched.id}`, text, caseNumber: matched.caseNumber, departmentName: archiveDepartmentName(text) }
     }
     const options = input.options ?? {}
-    const context = await buildLetterContext({ em, scope, request, points, departmentNames, options, settings })
+    const letterDepartments = departmentNames.length === 0 && archiveAnswer?.departmentName ? [archiveAnswer.departmentName] : departmentNames
+    const context = await buildLetterContext({ em, scope, request, points, departmentNames: letterDepartments, options, settings })
     const generated = await generateDraftParagraphs({
       container: ctx.container,
       scope: { ...scope, userId: actorUserId ?? '' },
@@ -212,7 +219,7 @@ defineRequestCommand<z.infer<ReturnType<typeof draftGenerateInput>>, { draftId: 
       replies,
       archiveAnswer,
     })
-    return { ...generated, letterOptions: { ...options, departmentNames, letterDate: context.letterDate }, attachmentList: [] }
+    return { ...generated, letterOptions: { ...options, departmentNames: letterDepartments, letterDate: context.letterDate }, attachmentList: [] }
   },
   async run({ em, scope, request, input, actorUserId, pre }) {
     const latest = await em.findOne(PublicInfoResponseDraft, { requestId: request.id, tenantId: scope.tenantId, organizationId: scope.organizationId }, { orderBy: { version: 'desc' } })
