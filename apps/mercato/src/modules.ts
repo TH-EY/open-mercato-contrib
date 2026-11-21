@@ -225,6 +225,8 @@ export const enabledModules: ModuleEntry[] = [
     },
   },
   { id: 'ratelimit_probe', from: '@app' },
+  // Bydgoszcz City Hall UDIP request desk (Hacknation 2026 demo).
+  { id: 'public_info_requests', from: '@app' },
 ]
 
 // Official modules activated via official-modules.json / official-modules.local.json
