@@ -18,7 +18,7 @@ import { flash } from '@open-mercato/ui/backend/FlashMessages'
 import { useGuardedMutation } from '@open-mercato/ui/backend/injection/useGuardedMutation'
 import Link from 'next/link'
 import { ExternalLink, Trash2, Plus } from 'lucide-react'
-import { caseAction, formatDate, getJson, postJson, todayIsoLocal, uploadDocument, type UploadedDocument } from './api'
+import { caseAction, deleteDocument, formatDate, getJson, postJson, todayIsoLocal, uploadDocument, type UploadedDocument } from './api'
 import { CHANNELS, DELIVERY_FORMS, REQUESTER_KINDS } from './labels'
 
 type IntakeResponse = {
@@ -77,7 +77,7 @@ export default function CreateRequestWizard() {
   const [step, setStep] = React.useState(0)
   const [requestId] = React.useState(newId)
   const [channel, setChannel] = React.useState<string>('email')
-  const [document, setDocument] = React.useState<UploadedDocument | null>(null)
+  const [documents, setDocuments] = React.useState<UploadedDocument[]>([])
   const [text, setText] = React.useState('')
   const [busy, setBusy] = React.useState(false)
   const [intake, setIntake] = React.useState<IntakeResponse | null>(null)
@@ -94,16 +94,43 @@ export default function CreateRequestWizard() {
     [retryLastMutation],
   )
 
+  const applyDocuments = (next: UploadedDocument[]) => {
+    setDocuments(next)
+    setText(next.map((item) => item.extractedText?.trim() ?? '').filter(Boolean).join('\n\n'))
+  }
+
   const handleFiles = async (files: File[]) => {
-    const file = files[0]
-    if (!file) return
+    if (files.length === 0) return
     setBusy(true)
+    let next = documents
     try {
-      const uploaded = await uploadDocument(file, requestId, 'request')
-      setDocument(uploaded)
-      setText(uploaded.extractedText ?? '')
+      for (const file of files) {
+        const uploaded = await runMutation({
+          operation: () => uploadDocument(file, requestId, 'request'),
+          context: mutationContext,
+          mutationPayload: { action: 'upload', fileName: file.name },
+        })
+        next = [...next, uploaded]
+        applyDocuments(next)
+      }
     } catch (error) {
       flash(error instanceof Error ? error.message : t('public_info_requests.create.uploadFailed', 'Upload failed'), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const removeDocument = async (documentId: string) => {
+    setBusy(true)
+    try {
+      await runMutation({
+        operation: () => deleteDocument(documentId),
+        context: mutationContext,
+        mutationPayload: { action: 'remove-document', documentId },
+      })
+      applyDocuments(documents.filter((item) => item.id !== documentId))
+    } catch (error) {
+      flash(error instanceof Error ? error.message : String(error), 'error')
     } finally {
       setBusy(false)
     }
@@ -113,7 +140,7 @@ export default function CreateRequestWizard() {
     setBusy(true)
     try {
       const response = await postJson<IntakeResponse>('/intake', {
-        ...(document ? { attachmentId: document.id } : {}),
+        ...(documents.length > 0 ? { attachmentIds: documents.map((item) => item.id) } : {}),
         text: text.trim() ? text : undefined,
         channel,
       })
@@ -236,22 +263,40 @@ export default function CreateRequestWizard() {
             <div className="space-y-3 rounded-lg border bg-card p-4">
               <FileUploadArea
                 accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/png,image/jpeg,message/rfc822,.eml,.docx,.txt,text/plain"
-                multiple={false}
+                multiple
                 onFilesSelected={(files) => { void handleFiles(files) }}
                 heading={t('public_info_requests.create.dropHeading', 'Drop the request scan, PDF, DOCX or e-mail')}
                 description={t('public_info_requests.create.dropDescription', 'Text is extracted locally; scans are read with OCR.')}
               />
               {busy && step === 0 ? <div className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner size="sm" />{t('public_info_requests.create.processing', 'Reading the document…')}</div> : null}
-              {document ? (
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="font-medium">{document.fileName}</span>
-                  <StatusBadge variant={document.extractedText ? 'success' : 'warning'}>
-                    {t(`public_info_requests.textSource.${document.textSource}`, document.textSource)}
-                    {document.ocrConfidence != null ? ` · ${Math.round(document.ocrConfidence * 100)}%` : ''}
-                  </StatusBadge>
-                </div>
+              {documents.length > 0 ? (
+                <ul className="space-y-2" data-testid="udip-intake-files">
+                  {documents.map((item) => (
+                    <li key={item.id} className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm">
+                      <span className="flex min-w-0 flex-1 items-center gap-2">
+                        <span className="min-w-0 truncate font-medium" title={item.fileName}>{item.fileName}</span>
+                        <StatusBadge className="shrink-0" variant={item.extractedText && !(item.ocrConfidence != null && item.ocrConfidence < 0.6) ? 'success' : 'warning'}>
+                          {t(`public_info_requests.textSource.${item.textSource}`, item.textSource)}
+                          {item.ocrConfidence != null ? ` · ${Math.round(item.ocrConfidence * 100)}%` : ''}
+                        </StatusBadge>
+                      </span>
+                      <IconButton
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy}
+                        aria-label={t('public_info_requests.create.removeFile', 'Remove file')}
+                        title={t('public_info_requests.create.removeFile', 'Remove file')}
+                        onClick={() => { void removeDocument(item.id) }}
+                      >
+                        <Trash2 className="size-4" />
+                      </IconButton>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
-              {document && (!document.extractedText || (document.ocrConfidence != null && document.ocrConfidence < 0.6)) ? (
+              {documents.length > 1 ? <p className="text-xs text-muted-foreground">{t('public_info_requests.create.multipleFilesHint', 'Text from all files is combined on the right. Remove a file to leave it out of the request.')}</p> : null}
+              {documents.some((item) => !item.extractedText || (item.ocrConfidence != null && item.ocrConfidence < 0.6)) ? (
                 <Alert status="warning">
                   <AlertTitle>{t('public_info_requests.create.unreadableTitle', 'The document could not be read reliably')}</AlertTitle>
                   <AlertDescription>{t('public_info_requests.create.unreadableBody', 'It may be handwritten or blurry. Type the request text on the right — the original stays attached to the case.')}</AlertDescription>
@@ -265,7 +310,7 @@ export default function CreateRequestWizard() {
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => router.push('/backend/public_info_requests')}>{t('public_info_requests.common.cancel', 'Cancel')}</Button>
-            <Button type="button" disabled={busy || (!document && !text.trim())} onClick={() => { void goToDetails() }}>
+            <Button type="button" disabled={busy || (documents.length === 0 && !text.trim())} onClick={() => { void goToDetails() }}>
               {busy ? <Spinner size="sm" /> : null}{t('public_info_requests.create.next', 'Next: data and deadline')}
             </Button>
           </div>

@@ -210,6 +210,7 @@ export const registerClarificationSchema = z.object({
 
 export const intakeExtractSchema = z.object({
   attachmentId: z.string().uuid().optional(),
+  attachmentIds: z.array(z.string().uuid()).max(20).optional(),
   text: z.string().max(100000).optional(),
   channel: channelSchema.optional(),
 })

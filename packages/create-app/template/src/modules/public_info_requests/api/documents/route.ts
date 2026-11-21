@@ -4,8 +4,8 @@ import { z } from 'zod'
 import type { EntityManager, FilterQuery } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
 import type { AttachmentService } from '@open-mercato/core/modules/attachments'
-import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
-import { CrudHttpError } from '@open-mercato/shared/lib/crud/errors'
+import { findOneWithDecryption, findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
+import { CrudHttpError, isCrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { runRouteMutationGuards } from '@open-mercato/shared/lib/crud/route-mutation-guard'
 import { PublicInfoDocument, type PublicInfoDocumentKind } from '../../data/entities'
 import { handleRoute, resolveRouteContext } from '../../lib/server/routeContext'
@@ -17,10 +17,12 @@ import { jsonMethodDoc } from '../openapi'
 export const metadata = {
   GET: { requireAuth: true, requireFeatures: ['public_info_requests.view'] },
   POST: { requireAuth: true, requireFeatures: ['public_info_requests.manage'] },
+  DELETE: { requireAuth: true, requireFeatures: ['public_info_requests.manage'] },
 }
 
 const listQuerySchema = z.object({ requestId: z.string().uuid(), kind: z.string().optional() })
 const kindSchema = z.enum(['request', 'reply', 'clarification', 'other'])
+const deleteQuerySchema = z.object({ id: z.string().uuid() })
 
 export type DocumentDto = {
   id: string
@@ -137,6 +139,57 @@ export async function POST(req: Request) {
       // committed upload must still succeed
     }
     return NextResponse.json({ ...toDocumentDto(document), extractedText: extracted.text }, { status: 201 })
+  })
+}
+
+export async function DELETE(req: Request) {
+  return handleRoute(async () => {
+    const routeContext = await resolveRouteContext(req)
+    const query = deleteQuerySchema.parse(Object.fromEntries(new URL(req.url).searchParams))
+    const em = routeContext.container.resolve('em') as EntityManager
+    const writeEm = em.fork()
+    const document = await findOneWithDecryption(
+      writeEm,
+      PublicInfoDocument,
+      { id: query.id, tenantId: routeContext.tenantId, organizationId: routeContext.organizationId, deletedAt: null } as FilterQuery<PublicInfoDocument>,
+      undefined,
+      routeContext,
+    )
+    if (!document) throw new CrudHttpError(404, { error: 'Document not found' })
+    if (document.kind !== 'request') {
+      throw new CrudHttpError(409, { error: 'Only request documents can be removed', code: 'document_not_removable' })
+    }
+    const guard = await runRouteMutationGuards({
+      container: routeContext.container,
+      req,
+      auth: { userId: routeContext.userId, tenantId: routeContext.tenantId, organizationId: routeContext.organizationId },
+      input: { resourceKind: 'public_info_requests.document', resourceId: document.requestId, operation: 'delete', mutationPayload: { documentId: document.id } },
+    })
+    if (!guard.ok) return guard.response
+    const attachmentService = routeContext.container.resolve('attachmentService') as AttachmentService
+    if (document.attachmentId && attachmentService.releaseScoped) {
+      try {
+        await attachmentService.releaseScoped({
+          attachmentId: document.attachmentId,
+          tenantId: routeContext.tenantId,
+          organizationId: routeContext.organizationId,
+          expectedOwner: { entityId: REQUEST_ENTITY_ID, recordId: document.requestId },
+          expectedAssignment: { type: REQUEST_ENTITY_ID, id: document.requestId },
+          expectedPartitionCode: PUBLIC_INFO_PARTITION_CODE,
+        })
+      } catch (error) {
+        if (!isCrudHttpError(error) || (error.status !== 404 && error.status !== 409)) throw error
+      }
+    }
+    document.deletedAt = new Date()
+    document.updatedAt = new Date()
+    await writeEm.flush()
+    try {
+      await guard.runAfterSuccess()
+    } catch {
+      // committed removal must still succeed
+    }
+    return NextResponse.json({ ok: true })
   })
 }
 

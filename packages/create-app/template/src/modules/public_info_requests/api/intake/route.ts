@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { FilterQuery } from '@mikro-orm/postgresql'
 import type { OpenApiRouteDoc } from '@open-mercato/shared/lib/openapi'
-import { findOneWithDecryption } from '@open-mercato/shared/lib/encryption/find'
+import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import { PublicInfoDocument } from '../../data/entities'
 import { intakeExtractorOutputSchema } from '../../data/ai-schemas'
 import { intakeExtractSchema } from '../../data/validators'
@@ -24,21 +24,25 @@ export async function POST(req: Request) {
     let text = input.text ?? ''
     let textSource = 'manual'
     let ocrConfidence: number | null = null
-    if (input.attachmentId) {
-      const document = await findOneWithDecryption(
-        routeContext.em,
-        PublicInfoDocument,
-        { id: input.attachmentId, tenantId: routeContext.tenantId, organizationId: routeContext.organizationId, deletedAt: null } as FilterQuery<PublicInfoDocument>,
-        undefined,
-        routeContext,
-      )
-      if (document) {
-        text = text || document.extractedText || ''
-        textSource = document.textSource
-        ocrConfidence = document.ocrConfidence ?? null
-      }
+    const documentIds = Array.from(new Set([...(input.attachmentIds ?? []), ...(input.attachmentId ? [input.attachmentId] : [])]))
+    const documents = documentIds.length > 0
+      ? await findWithDecryption(
+          routeContext.em,
+          PublicInfoDocument,
+          { id: { $in: documentIds }, tenantId: routeContext.tenantId, organizationId: routeContext.organizationId, deletedAt: null } as FilterQuery<PublicInfoDocument>,
+          { orderBy: { createdAt: 'asc' } },
+          routeContext,
+        )
+      : []
+    const isLowConfidence = (document: PublicInfoDocument) =>
+      !document.extractedText?.trim() || (document.textSource === 'ocr_tesseract' && document.ocrConfidence != null && document.ocrConfidence < LOW_OCR_CONFIDENCE)
+    if (documents.length > 0) {
+      text = text || documents.map((document) => document.extractedText?.trim() ?? '').filter(Boolean).join('\n\n')
+      const scanned = documents.filter((document) => document.textSource === 'ocr_tesseract')
+      textSource = scanned.length > 0 ? 'ocr_tesseract' : documents[0].textSource
+      ocrConfidence = scanned.length > 0 ? Math.min(...scanned.map((document) => document.ocrConfidence ?? 0)) : documents[0].ocrConfidence ?? null
     }
-    const unreadable = !text.trim() || (textSource === 'ocr_tesseract' && ocrConfidence !== null && ocrConfidence < LOW_OCR_CONFIDENCE)
+    const unreadable = !text.trim() || (documents.length > 0 && documents.every(isLowConfidence))
     const heuristic: IntakeSuggestion = parseRequestText(text, { channel: input.channel })
     let suggestions = heuristic
     let generatedBy: 'ai' | 'heuristic' = 'heuristic'

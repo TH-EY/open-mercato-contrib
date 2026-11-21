@@ -32,6 +32,11 @@ export async function uploadDocument(file: File, requestId: string, kind: 'reque
   return response.result as UploadedDocument
 }
 
+export async function deleteDocument(documentId: string): Promise<void> {
+  const response = await apiCall<{ ok: boolean }>(`${API_BASE}/documents?id=${encodeURIComponent(documentId)}`, { method: 'DELETE' })
+  if (!response.ok) await raiseCrudError(response.response)
+}
+
 export async function downloadFile(
   path: string,
   fallbackName: string,
