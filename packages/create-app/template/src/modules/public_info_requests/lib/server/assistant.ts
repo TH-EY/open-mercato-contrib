@@ -31,6 +31,22 @@ export function isAssistantConfigured(): boolean {
   )
 }
 
+const AGENT_STEPS: Record<string, string> = {
+  'public_info_requests.intake_extractor': 'intake',
+  'public_info_requests.router': 'routing',
+  'public_info_requests.drafter': 'drafting',
+  'public_info_requests.pii_detector': 'pii',
+  'public_info_requests.ocr_transcriber': 'ocr',
+}
+
+export function isAgentStepEnabled(agentId: string): boolean {
+  const raw = process.env.PUBLIC_INFO_AI_AGENTS?.trim().toLowerCase()
+  if (!raw || raw === 'all') return true
+  if (raw === 'none') return false
+  const steps = new Set(raw.split(',').map((step) => step.trim()).filter(Boolean))
+  return steps.has(AGENT_STEPS[agentId] ?? agentId)
+}
+
 const PROVIDER_KEY_ENV: Record<string, string[]> = {
   anthropic: ['ANTHROPIC_API_KEY', 'OPENCODE_ANTHROPIC_API_KEY'],
   openai: ['OPENAI_API_KEY'],
@@ -43,6 +59,7 @@ export function ocrFallbackProvider(): string {
 
 export function isOcrFallbackConfigured(): boolean {
   if (process.env.PUBLIC_INFO_AI_DISABLED === 'true' || process.env.PUBLIC_INFO_OCR_FALLBACK === 'false') return false
+  if (!isAgentStepEnabled('public_info_requests.ocr_transcriber')) return false
   const keys = PROVIDER_KEY_ENV[ocrFallbackProvider()]
   return keys ? keys.some(hasValue) : isAssistantConfigured()
 }
@@ -87,7 +104,7 @@ export type AssistantCallInput<T> = {
 }
 
 export async function runAssistantObject<T>(input: AssistantCallInput<T>): Promise<T | null> {
-  if (!isAssistantConfigured()) return null
+  if (!isAssistantConfigured() || !isAgentStepEnabled(input.agentId)) return null
   let runtime: AgentRuntimeModule
   let registry: AgentRegistryModule
   try {

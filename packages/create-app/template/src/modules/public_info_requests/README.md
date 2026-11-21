@@ -52,8 +52,15 @@ PUBLIC_INFO_OCR_FALLBACK=false          # switch the fallback off
 ```
 
 The key also lets the other UDIP agents (intake, routing, drafting, PII) refine their steps when
-`OM_AI_PROVIDER` points at a configured provider; `PUBLIC_INFO_AI_DISABLED=true` turns every AI
-step off.
+`OM_AI_PROVIDER` points at a configured provider. Note that `OM_AI_PROVIDER` + `OM_AI_MODEL` set
+together are an atomic pair: with `openai`/`gpt-5-mini` and no OpenAI key those agents fail and the
+module silently uses its rule-based steps. To use Claude everywhere set
+`OM_AI_PROVIDER=anthropic` and `OM_AI_MODEL=claude-sonnet-4-6`.
+
+Choose which steps may call a model with `PUBLIC_INFO_AI_AGENTS` (comma-separated: `intake`,
+`routing`, `drafting`, `pii`, `ocr`; default `all`, or `none`). For example
+`PUBLIC_INFO_AI_AGENTS=ocr` reads unreadable scans with Claude while intake, routing, drafting and
+anonymisation stay rule-based. `PUBLIC_INFO_AI_DISABLED=true` turns every AI step off.
 
 ## Officers and assignment
 
