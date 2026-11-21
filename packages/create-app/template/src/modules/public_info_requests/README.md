@@ -46,7 +46,7 @@ restart the dev server:
 ANTHROPIC_API_KEY=…                     # enables the fallback
 # optional
 PUBLIC_INFO_OCR_PROVIDER=anthropic      # any configured AI provider id
-PUBLIC_INFO_OCR_MODEL=claude-sonnet-4-6 # default for anthropic
+PUBLIC_INFO_OCR_MODEL=claude-sonnet-5-5 # default for anthropic
 PUBLIC_INFO_OCR_FALLBACK_THRESHOLD=0.6
 PUBLIC_INFO_OCR_FALLBACK=false          # switch the fallback off
 ```
@@ -55,7 +55,7 @@ The key also lets the other UDIP agents (intake, routing, drafting, PII) refine 
 `OM_AI_PROVIDER` points at a configured provider. Note that `OM_AI_PROVIDER` + `OM_AI_MODEL` set
 together are an atomic pair: with `openai`/`gpt-5-mini` and no OpenAI key those agents fail and the
 module silently uses its rule-based steps. To use Claude everywhere set
-`OM_AI_PROVIDER=anthropic` and `OM_AI_MODEL=claude-sonnet-4-6`.
+`OM_AI_PROVIDER=anthropic` and `OM_AI_MODEL=claude-sonnet-5-5`.
 
 Choose which steps may call a model with `PUBLIC_INFO_AI_AGENTS` (comma-separated: `intake`,
 `routing`, `drafting`, `pii`, `ocr`; default `all`, or `none`). For example

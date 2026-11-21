@@ -111,7 +111,7 @@ const piiAgent: AiAgentDefinition = {
 }
 
 export const OCR_DEFAULT_PROVIDER = 'anthropic'
-export const OCR_DEFAULT_MODEL = 'claude-sonnet-4-6'
+export const OCR_DEFAULT_MODEL = 'claude-sonnet-5-5'
 
 const ocrAgent: AiAgentDefinition = {
   id: 'public_info_requests.ocr_transcriber',
