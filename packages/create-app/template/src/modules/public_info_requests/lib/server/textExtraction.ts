@@ -64,6 +64,63 @@ export async function resolveOcrToolchain(): Promise<OcrToolchain | null> {
   return cachedToolchain
 }
 
+let cachedPdftotext: string | null | undefined
+
+async function resolvePdftotext(): Promise<string | null> {
+  if (cachedPdftotext !== undefined) return cachedPdftotext
+  const pdftotext = binary('pdftotext', 'PUBLIC_INFO_PDFTOTEXT_BIN')
+  cachedPdftotext = (await canRun(pdftotext, ['-v'])) !== null ? pdftotext : null
+  return cachedPdftotext
+}
+
+export function normalizeExtractedText(raw: string): string {
+  return raw
+    .replace(/\r\n?/g, '\n')
+    .replace(/\f/g, '\n\n')
+    .split('\n')
+    .map((line) => line.replace(/[ \t\u00a0]+$/g, ''))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
+async function extractPdfTextLayer(filePath: string): Promise<string | null> {
+  const pdftotext = await resolvePdftotext()
+  if (!pdftotext) return null
+  try {
+    const { stdout } = await run(pdftotext, ['-enc', 'UTF-8', '-l', String(MAX_OCR_PAGES * 5), filePath, '-'], { timeout: EXEC_TIMEOUT_MS, maxBuffer: 32 * 1024 * 1024 })
+    const text = normalizeExtractedText(stdout)
+    return text.length > 0 ? text : null
+  } catch (error) {
+    logger.warn('pdftotext failed', { error })
+    return null
+  }
+}
+
+export function assembleTesseractTsv(tsv: string): { text: string; confidences: number[] } {
+  const paragraphs = new Map<string, Map<string, string[]>>()
+  const confidences: number[] = []
+  for (const row of tsv.split('\n').slice(1)) {
+    const columns = row.split('\t')
+    if (columns.length < 12) continue
+    const word = columns[11]?.trim()
+    const confidence = Number(columns[10])
+    if (!word) continue
+    if (Number.isFinite(confidence) && confidence >= 0) confidences.push(confidence)
+    const paragraphKey = `${columns[2]}-${columns[3]}`
+    const lineKey = columns[4]
+    const lines = paragraphs.get(paragraphKey) ?? new Map<string, string[]>()
+    const words = lines.get(lineKey) ?? []
+    words.push(word)
+    lines.set(lineKey, words)
+    paragraphs.set(paragraphKey, lines)
+  }
+  const text = Array.from(paragraphs.values())
+    .map((lines) => Array.from(lines.values()).map((words) => words.join(' ')).join('\n'))
+    .join('\n\n')
+  return { text, confidences }
+}
+
 export async function isLocalOcrAvailable(): Promise<boolean> {
   return (await resolveOcrToolchain()) !== null
 }
@@ -119,20 +176,9 @@ async function ocrImages(toolchain: OcrToolchain, imagePaths: string[]): Promise
     const args = [imagePath, 'stdout', '-l', toolchain.language, '--psm', '3', '-c', 'tessedit_create_tsv=1']
     if (toolchain.tessdataDir) args.unshift('--tessdata-dir', toolchain.tessdataDir)
     const { stdout } = await run(toolchain.tesseract, args, { timeout: EXEC_TIMEOUT_MS, maxBuffer: 32 * 1024 * 1024 })
-    const lines = new Map<string, string[]>()
-    for (const row of stdout.split('\n').slice(1)) {
-      const columns = row.split('\t')
-      if (columns.length < 12) continue
-      const word = columns[11]?.trim()
-      const confidence = Number(columns[10])
-      if (!word) continue
-      if (Number.isFinite(confidence) && confidence >= 0) confidences.push(confidence)
-      const key = `${columns[2]}-${columns[3]}-${columns[4]}`
-      const existing = lines.get(key) ?? []
-      existing.push(word)
-      lines.set(key, existing)
-    }
-    pages.push(Array.from(lines.values()).map((words) => words.join(' ')).join('\n'))
+    const assembled = assembleTesseractTsv(stdout)
+    confidences.push(...assembled.confidences)
+    pages.push(assembled.text)
   }
   const confidence = confidences.length > 0 ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length / 100 : null
   return { text: pages.join('\n\n').trim(), confidence }
@@ -165,11 +211,13 @@ export async function extractDocumentText(input: { buffer: Buffer; fileName: str
     const pdf = isPdf(input.fileName, input.mimeType)
     const image = isImage(input.fileName, input.mimeType)
     if (!image) {
-      let extracted: string | null = null
-      try {
-        extracted = await extractAttachmentContent({ filePath, mimeType: input.mimeType ?? '' })
-      } catch (error) {
-        logger.warn('text layer extraction failed', { error })
+      let extracted: string | null = pdf ? await extractPdfTextLayer(filePath) : null
+      if (!extracted || extracted.replace(/\s+/g, '').length < MIN_TEXT_LAYER_CHARS) {
+        try {
+          extracted = await extractAttachmentContent({ filePath, mimeType: input.mimeType ?? '' })
+        } catch (error) {
+          logger.warn('text layer extraction failed', { error })
+        }
       }
       if (extracted && extracted.replace(/\s+/g, '').length >= MIN_TEXT_LAYER_CHARS) {
         return { text: extracted, source: pdf ? 'pdf' : 'docx', ocrConfidence: null }

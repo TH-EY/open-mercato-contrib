@@ -16,7 +16,8 @@ exports the letter, and tracks the statutory deadline. **It never sends anything
    point `PUBLIC_INFO_TESSDATA_DIR` at a folder that contains `pol.traineddata`
    (from `tesseract-ocr/tessdata_fast`). Without Polish data, English OCR is used. Without
    Tesseract, scans fall back to manual typing (or to the built-in LLM OCR when an OpenAI key is
-   configured).
+   configured). PDFs with a text layer are read with `pdftotext` (poppler) so lines and paragraphs
+   survive; without it the shared attachments extractor is used, which flattens each page.
 3. Import the archive of past requests and answers, for example the UMB samples. Skip the cases
    you want to register live during the demo:
 
