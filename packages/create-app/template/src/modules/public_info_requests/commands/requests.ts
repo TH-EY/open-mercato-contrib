@@ -5,6 +5,7 @@ import { registerCommand } from '@open-mercato/shared/lib/commands'
 import { CrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { PublicInfoRequest, PublicInfoRequestPoint } from '../data/entities'
 import { requestCreateSchema, requestUpdateSchema, type RequestUpdateInput } from '../data/validators'
+import { assertAssignable } from '../lib/server/users'
 import {
   assertCaseNumberFree,
   computeDeadlines,
@@ -63,6 +64,8 @@ const createRequestCommand: CommandHandler<Record<string, unknown>, { id: string
     const parsedNumber = parseCaseNumber(input.caseNumber)
     if (!parsedNumber) throw new CrudHttpError(422, { error: 'Invalid case number' })
     const baseEm = ctx.container.resolve('em') as EntityManager
+    const assigneeUserId = input.assigneeUserId === undefined ? actorOf(ctx) : input.assigneeUserId
+    if (assigneeUserId && assigneeUserId !== actorOf(ctx)) await assertAssignable(baseEm.fork(), ctx.container, scope, assigneeUserId)
     const request = await baseEm.fork().transactional(async (em) => {
       await assertCaseNumberFree(em, scope, input.caseNumber)
       const settings = await loadSettings(em, scope)
@@ -86,7 +89,7 @@ const createRequestCommand: CommandHandler<Record<string, unknown>, { id: string
         subjectSummary: input.subjectSummary,
         bodyText: input.bodyText ?? null,
         status: 'new',
-        assigneeUserId: input.assigneeUserId ?? actorOf(ctx),
+        assigneeUserId,
         statutoryDueDate: deadlines.statutoryDueDate,
         currentDueDate: deadlines.currentDueDate,
         dueShiftedFrom: deadlines.dueShiftedFrom,

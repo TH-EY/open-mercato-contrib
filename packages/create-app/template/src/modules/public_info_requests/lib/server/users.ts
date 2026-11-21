@@ -1,4 +1,6 @@
 import type { EntityManager, FilterQuery } from '@mikro-orm/postgresql'
+import type { AwilixContainer } from 'awilix'
+import { CrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import { User } from '@open-mercato/core/modules/auth/data/entities'
 import type { Scope } from './requests'
@@ -29,4 +31,39 @@ export async function loadUserLabels(em: EntityManager, scope: Scope, ids: strin
     labels.set(user.id, { id: user.id, name, initials: initialsOf(name) })
   }
   return labels
+}
+
+export const ASSIGNABLE_FEATURE = 'public_info_requests.manage'
+
+type FeatureChecker = {
+  userHasAllFeatures: (userId: string, features: string[], scope: { tenantId: string | null; organizationId: string | null }) => Promise<boolean>
+}
+
+export async function listAssignableUsers(em: EntityManager, container: AwilixContainer, scope: Scope): Promise<UserLabel[]> {
+  const users = await findWithDecryption(
+    em,
+    User,
+    { tenantId: scope.tenantId, deletedAt: null } as FilterQuery<User>,
+    undefined,
+    { tenantId: scope.tenantId, organizationId: scope.organizationId },
+  )
+  const rbac = container.resolve('rbacService') as FeatureChecker
+  const inOrganization = users.filter((user) => !user.organizationId || user.organizationId === scope.organizationId)
+  const allowed = await Promise.all(
+    inOrganization.map(async (user) => ((await rbac.userHasAllFeatures(user.id, [ASSIGNABLE_FEATURE], { tenantId: scope.tenantId, organizationId: scope.organizationId })) ? user : null)),
+  )
+  return allowed
+    .filter((user): user is User => user !== null)
+    .map((user) => {
+      const name = user.name && user.name.trim().length > 0 ? user.name : user.email
+      return { id: user.id, name, initials: initialsOf(name) }
+    })
+    .sort((left, right) => left.name.localeCompare(right.name, 'pl'))
+}
+
+export async function assertAssignable(em: EntityManager, container: AwilixContainer, scope: Scope, userId: string): Promise<void> {
+  const assignable = await listAssignableUsers(em, container, scope)
+  if (!assignable.some((user) => user.id === userId)) {
+    throw new CrudHttpError(422, { error: 'This person cannot be assigned to requests', code: 'assignee_not_allowed', fieldErrors: { assigneeUserId: 'not_allowed' } })
+  }
 }

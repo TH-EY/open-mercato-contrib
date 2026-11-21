@@ -14,7 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar } from '@open-mercato/ui/primitives/avatar'
 import { LoadingMessage, ErrorMessage } from '@open-mercato/ui/backend/detail'
 import { ScheduleView, type ScheduleItem, type ScheduleRange, type ScheduleViewMode } from '@open-mercato/ui/backend/schedule'
-import { formatDate, getJson, todayIsoLocal, type RequestListItem } from './api'
+import { flash } from '@open-mercato/ui/backend/FlashMessages'
+import { useGuardedMutation } from '@open-mercato/ui/backend/injection/useGuardedMutation'
+import { caseAction, formatDate, getJson, todayIsoLocal, type RequestListItem } from './api'
 import { STATUS_FALLBACK, STATUS_VARIANT, TONE_ROW_CLASS, TONE_VARIANT } from './labels'
 
 type ListResponse = { items: RequestListItem[]; total: number }
@@ -42,6 +44,34 @@ export default function RequestsCalendar() {
   const [status, setStatus] = React.useState('all')
   const [search, setSearch] = React.useState('')
   const [mine, setMine] = React.useState(false)
+  const [unassigned, setUnassigned] = React.useState(false)
+  const [reloadKey, setReloadKey] = React.useState(0)
+  const [claiming, setClaiming] = React.useState<string | null>(null)
+  const { runMutation, retryLastMutation } = useGuardedMutation<{ formId: string; resourceKind: string; retryLastMutation: () => Promise<boolean> }>({
+    contextId: 'public-info-requests-calendar',
+    blockedMessage: t('ui.forms.flash.saveBlocked', 'Save blocked by validation'),
+  })
+  const mutationContext = React.useMemo(
+    () => ({ formId: 'public-info-requests-calendar', resourceKind: 'public_info_requests.request', retryLastMutation }),
+    [retryLastMutation],
+  )
+
+  const claim = async (item: RequestListItem) => {
+    setClaiming(item.id)
+    try {
+      await runMutation({
+        operation: () => caseAction(item.id, 'claim', { expectedUpdatedAt: item.updatedAt }),
+        context: mutationContext,
+        mutationPayload: { action: 'claim', requestId: item.id },
+      })
+      flash(t('public_info_requests.assignee.claimed', 'You are now the officer for this request.'), 'success')
+      setReloadKey((value) => value + 1)
+    } catch (error) {
+      flash(error instanceof Error ? error.message : String(error), 'error')
+    } finally {
+      setClaiming(null)
+    }
+  }
   const [showClosed, setShowClosed] = React.useState(false)
   const [items, setItems] = React.useState<RequestListItem[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -60,6 +90,7 @@ export default function RequestsCalendar() {
     else if (!showClosed) params.set('hideClosed', 'true')
     if (search.trim()) params.set('q', search.trim())
     if (mine) params.set('mine', 'true')
+    else if (unassigned) params.set('unassigned', 'true')
     getJson<ListResponse>(`/requests?${params.toString()}`)
       .then((response) => {
         if (!cancelled) setItems(response.items ?? [])
@@ -73,7 +104,7 @@ export default function RequestsCalendar() {
     return () => {
       cancelled = true
     }
-  }, [year, status, search, mine, showClosed, scopeVersion, today])
+  }, [year, status, search, mine, unassigned, showClosed, scopeVersion, today, reloadKey])
 
   React.useEffect(() => {
     if (view !== 'month') return
@@ -196,7 +227,8 @@ export default function RequestsCalendar() {
                 ))}
               </SelectContent>
             </Select>
-            <SwitchField checked={mine} onCheckedChange={setMine} label={t('public_info_requests.calendar.mine', 'Only mine')} />
+            <SwitchField checked={mine} onCheckedChange={(value) => { setMine(value); if (value) setUnassigned(false) }} label={t('public_info_requests.calendar.mine', 'Only mine')} />
+            <SwitchField checked={unassigned} onCheckedChange={(value) => { setUnassigned(value); if (value) setMine(false) }} label={t('public_info_requests.calendar.unassigned', 'Only unassigned')} />
             <SwitchField checked={showClosed} onCheckedChange={setShowClosed} label={t('public_info_requests.calendar.showClosed', 'Show answered')} />
           </div>
           <div className="flex flex-wrap gap-4 border-b px-4 py-2 text-xs text-muted-foreground">
@@ -258,7 +290,21 @@ export default function RequestsCalendar() {
                         {item.status === 'extended' ? ' ↗' : ''}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell>{item.assigneeInitials ? <Avatar label={item.assigneeName ?? item.assigneeInitials} size="sm" /> : '—'}</TableCell>
+                    <TableCell>
+                      {item.assigneeInitials ? (
+                        <span title={item.assigneeName ?? undefined}><Avatar label={item.assigneeName ?? item.assigneeInitials} size="sm" /></span>
+                      ) : item.status === 'sent' || item.status === 'left_unprocessed' ? '—' : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={claiming === item.id}
+                          onClick={(event) => { event.stopPropagation(); void claim(item) }}
+                        >
+                          {t('public_info_requests.assignee.claim', 'Claim')}
+                        </Button>
+                      )}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">{formatDate(item.respondedAt)}</TableCell>
                   </TableRow>
                 ))}

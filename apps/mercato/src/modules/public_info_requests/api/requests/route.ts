@@ -25,6 +25,7 @@ const querySchema = z
     status: z.string().optional(),
     assigneeUserId: z.string().uuid().optional(),
     mine: z.string().optional(),
+    unassigned: z.string().optional(),
     dueWithinDays: z.coerce.number().int().min(0).max(365).optional(),
     hideClosed: z.string().optional(),
     source: z.enum(['manual', 'import']).optional(),
@@ -144,6 +145,7 @@ export const { metadata, GET, POST, PUT, DELETE } = makeCrudRoute({
       else if (query.hideClosed === 'true' && !isSingleRecord(query)) target.status = { $in: OPEN_STATUSES }
       if (query.assigneeUserId) target.assignee_user_id = query.assigneeUserId
       if (parseBooleanToken(query.mine ?? null) === true && ctx.auth?.sub) target.assignee_user_id = String(ctx.auth.sub)
+      else if (parseBooleanToken(query.unassigned ?? null) === true) target.assignee_user_id = { $exists: false }
       if (query.dueWithinDays !== undefined) {
         target.current_due_date = { $lte: addCalendarDays(today, query.dueWithinDays) }
       }

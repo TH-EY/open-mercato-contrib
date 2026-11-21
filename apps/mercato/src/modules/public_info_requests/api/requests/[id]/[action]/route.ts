@@ -53,6 +53,8 @@ const POST_COMMANDS: Record<string, string> = {
   'record-clarification-delivery': 'public_info_requests.request.record_clarification_delivery',
   'register-clarification': 'public_info_requests.request.register_clarification',
   'leave-unprocessed': 'public_info_requests.request.leave_unprocessed',
+  assign: 'public_info_requests.request.assign',
+  claim: 'public_info_requests.request.claim',
 }
 
 async function readParams(ctx: RouteParams): Promise<Params> {

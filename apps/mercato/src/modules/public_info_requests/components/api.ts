@@ -17,6 +17,11 @@ export async function postJson<T = Record<string, unknown>>(path: string, body: 
   return (response.result ?? ({} as T)) as T
 }
 
+export type AssigneeOption = { id: string; name: string; initials: string }
+export type AssigneesResponse = { items: AssigneeOption[]; currentUserId: string | null }
+
+export const UNASSIGNED_VALUE = '__unassigned__'
+
 export async function caseAction<T = Record<string, unknown>>(requestId: string, action: string, body: unknown = {}): Promise<T> {
   return postJson<T>(`/requests/${requestId}/${action}`, body)
 }

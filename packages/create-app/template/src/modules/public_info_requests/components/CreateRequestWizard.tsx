@@ -18,7 +18,7 @@ import { flash } from '@open-mercato/ui/backend/FlashMessages'
 import { useGuardedMutation } from '@open-mercato/ui/backend/injection/useGuardedMutation'
 import Link from 'next/link'
 import { ExternalLink, Trash2, Plus } from 'lucide-react'
-import { caseAction, deleteDocument, formatDate, getJson, postJson, todayIsoLocal, uploadDocument, type UploadedDocument } from './api'
+import { caseAction, deleteDocument, formatDate, getJson, postJson, todayIsoLocal, uploadDocument, UNASSIGNED_VALUE, type AssigneesResponse, type UploadedDocument } from './api'
 import { CHANNELS, DELIVERY_FORMS, REQUESTER_KINDS } from './labels'
 
 type IntakeResponse = {
@@ -78,6 +78,8 @@ export default function CreateRequestWizard() {
   const [requestId] = React.useState(newId)
   const [channel, setChannel] = React.useState<string>('email')
   const [documents, setDocuments] = React.useState<UploadedDocument[]>([])
+  const [assignees, setAssignees] = React.useState<AssigneesResponse>({ items: [], currentUserId: null })
+  const [assigneeId, setAssigneeId] = React.useState<string>(UNASSIGNED_VALUE)
   const [text, setText] = React.useState('')
   const [busy, setBusy] = React.useState(false)
   const [intake, setIntake] = React.useState<IntakeResponse | null>(null)
@@ -93,6 +95,14 @@ export default function CreateRequestWizard() {
     () => ({ formId: 'public-info-request-create', resourceKind: 'public_info_requests.request', retryLastMutation }),
     [retryLastMutation],
   )
+
+  React.useEffect(() => {
+    let cancelled = false
+    getJson<AssigneesResponse>('/assignees')
+      .then((response) => { if (!cancelled) setAssignees(response) })
+      .catch(() => { if (!cancelled) setAssignees({ items: [], currentUserId: null }) })
+    return () => { cancelled = true }
+  }, [])
 
   const applyDocuments = (next: UploadedDocument[]) => {
     setDocuments(next)
@@ -200,6 +210,7 @@ export default function CreateRequestWizard() {
         deliveryForm: form.deliveryForm,
         subjectSummary: form.subjectSummary.trim(),
         bodyText: text || intake?.text || null,
+        assigneeUserId: assigneeId === UNASSIGNED_VALUE ? null : assigneeId,
         points: form.points.map((point) => point.trim()).filter(Boolean).map((point, index) => ({ position: index + 1, text: point })),
       }
       await runMutation({
@@ -391,6 +402,21 @@ export default function CreateRequestWizard() {
               <div className="space-y-1">
                 <Label htmlFor="udip-letter">{t('public_info_requests.field.letterDate', 'Date of the letter')}</Label>
                 <Input id="udip-letter" type="date" value={form.letterDate} onChange={(event) => update({ letterDate: event.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <Label>{t('public_info_requests.assignee.label', 'Officer')}</Label>
+                <Select value={assigneeId} onValueChange={setAssigneeId}>
+                  <SelectTrigger data-testid="udip-assignee"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED_VALUE}>{t('public_info_requests.assignee.unassigned', 'Unassigned')}</SelectItem>
+                    {assignees.items.map((option) => (
+                      <SelectItem key={option.id} value={option.id}>
+                        {option.name}{option.id === assignees.currentUserId ? ` (${t('public_info_requests.assignee.me', 'me')})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('public_info_requests.assignee.hint', 'Leave unassigned so that an employee can claim the request.')}</p>
               </div>
             </div>
             {deadline ? (

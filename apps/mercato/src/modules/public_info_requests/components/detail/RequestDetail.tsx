@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SwitchField } from '@open-mercato/ui/primitives/switch-field'
 import { LoadingMessage, ErrorMessage } from '@open-mercato/ui/backend/detail'
 import { ChevronLeft, Clock, PauseCircle, Send } from 'lucide-react'
-import { formatDate, getJson, todayIsoLocal } from '../api'
+import { formatDate, getJson, todayIsoLocal, UNASSIGNED_VALUE, type AssigneesResponse } from '../api'
 import { STATUS_FALLBACK, STATUS_VARIANT, TONE_VARIANT } from '../labels'
 import { useCaseMutation } from './useCaseMutation'
 import RoutingPanel from './RoutingPanel'
@@ -47,6 +47,15 @@ export default function RequestDetail({ id }: { id: string }) {
 
   React.useEffect(() => { void load() }, [load])
   const { run, pending } = useCaseMutation(id, load, detail?.request.updatedAt)
+  const [assignees, setAssignees] = React.useState<AssigneesResponse>({ items: [], currentUserId: null })
+
+  React.useEffect(() => {
+    let cancelled = false
+    getJson<AssigneesResponse>('/assignees')
+      .then((response) => { if (!cancelled) setAssignees(response) })
+      .catch(() => { if (!cancelled) setAssignees({ items: [], currentUserId: null }) })
+    return () => { cancelled = true }
+  }, [])
 
   if (error) return <ErrorMessage label={error} />
   if (!detail) return <LoadingMessage label={t('public_info_requests.common.loading', 'Loading…')} />
@@ -181,7 +190,34 @@ export default function RequestDetail({ id }: { id: string }) {
                 <dt className="text-muted-foreground">{t('public_info_requests.field.receivedAt', 'Date of receipt')}</dt><dd>{formatDate(request.receivedAt)}</dd>
                 <dt className="text-muted-foreground">{t('public_info_requests.create.deadline', 'Statutory deadline')}</dt><dd>{formatDate(request.statutoryDueDate)}{request.dueShiftedFrom ? ` (↷ ${formatDate(request.dueShiftedFrom)})` : ''}</dd>
                 <dt className="text-muted-foreground">{t('public_info_requests.create.maxExtension', 'Latest after extension')}</dt><dd>{formatDate(request.maxExtensionDate)}</dd>
-                <dt className="text-muted-foreground">{t('public_info_requests.calendar.col.assignee', 'Officer')}</dt><dd>{request.assigneeName ?? '—'}</dd>
+                <dt className="self-center text-muted-foreground">{t('public_info_requests.calendar.col.assignee', 'Officer')}</dt>
+                <dd className="flex flex-wrap items-center gap-2" data-testid="udip-detail-assignee">
+                  <Select
+                    value={request.assigneeUserId ?? UNASSIGNED_VALUE}
+                    disabled={pending === 'assign'}
+                    onValueChange={(value) => {
+                      void run('assign', { assigneeUserId: value === UNASSIGNED_VALUE ? null : value }, t('public_info_requests.assignee.assigned', 'Officer changed.'))
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-auto min-w-48" aria-label={t('public_info_requests.assignee.change', 'Change officer')}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNASSIGNED_VALUE}>{t('public_info_requests.assignee.unassigned', 'Unassigned')}</SelectItem>
+                      {request.assigneeUserId && !assignees.items.some((option) => option.id === request.assigneeUserId) ? (
+                        <SelectItem value={request.assigneeUserId}>{request.assigneeName ?? request.assigneeUserId}</SelectItem>
+                      ) : null}
+                      {assignees.items.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.name}{option.id === assignees.currentUserId ? ` (${t('public_info_requests.assignee.me', 'me')})` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!request.assigneeUserId ? (
+                    <Button type="button" size="sm" disabled={pending === 'claim'} onClick={() => { void run('claim', {}, t('public_info_requests.assignee.claimed', 'You are now the officer for this request.')) }}>
+                      {t('public_info_requests.assignee.claim', 'Claim')}
+                    </Button>
+                  ) : null}
+                </dd>
               </dl>
             </div>
           </div>

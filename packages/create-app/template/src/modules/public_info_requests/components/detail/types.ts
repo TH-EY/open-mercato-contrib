@@ -25,6 +25,7 @@ export type CaseDetail = {
     subjectSummary: string
     bodyText: string | null
     status: string
+    assigneeUserId: string | null
     assigneeName: string | null
     assigneeInitials: string | null
     statutoryDueDate: string

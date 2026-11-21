@@ -43,6 +43,7 @@ import { renderLetterText } from '../lib/drafting/render'
 import { anonymizeForArchive } from '../lib/pii/redact'
 import { clarificationDueDate, maxExtensionDate, todayIso } from '../lib/deadlines'
 import type { LetterType } from '../lib/drafting/types'
+import { assertAssignable } from '../lib/server/users'
 import { defineRequestCommand, snapshotRow, type ChildRowSnapshot, type CreatedRow } from './shared'
 
 const OPEN_STATUSES: PublicInfoRequestStatus[] = ['new', 'sent_to_departments', 'extended', 'in_preparation', 'prepared']
@@ -593,6 +594,41 @@ defineRequestCommand({
     transitionStatus(em, scope, request, 'sent', actorUserId)
     recordEvent(em, scope, request.id, 'marked_sent', actorUserId, { respondedAt: input.respondedAt, channel: input.channel, archived: input.addToArchive })
     return { result: { ok: true }, changedChildren }
+  },
+})
+
+defineRequestCommand({
+  id: 'public_info_requests.request.assign',
+  label: 'Assign request',
+  schema: withId({ assigneeUserId: z.string().uuid().nullable() }),
+  async precompute({ em, scope, input, ctx }) {
+    if (input.assigneeUserId) await assertAssignable(em, ctx.container, scope, input.assigneeUserId)
+    return undefined
+  },
+  async run({ em, scope, request, input, actorUserId }) {
+    const previous = request.assigneeUserId ?? null
+    request.assigneeUserId = input.assigneeUserId
+    recordEvent(em, scope, request.id, 'assigned', actorUserId, { assigneeUserId: input.assigneeUserId, previousAssigneeUserId: previous })
+    return { result: { ok: true } }
+  },
+})
+
+defineRequestCommand({
+  id: 'public_info_requests.request.claim',
+  label: 'Claim request',
+  schema: withId({}),
+  async precompute({ em, scope, ctx, actorUserId }) {
+    if (!actorUserId) throw new CrudHttpError(401, { error: 'Unauthorized' })
+    await assertAssignable(em, ctx.container, scope, actorUserId)
+    return undefined
+  },
+  async run({ em, scope, request, actorUserId }) {
+    if (request.assigneeUserId && request.assigneeUserId !== actorUserId) {
+      throw new CrudHttpError(409, { error: 'Request is already assigned to someone else', code: 'already_assigned' })
+    }
+    request.assigneeUserId = actorUserId
+    recordEvent(em, scope, request.id, 'claimed', actorUserId, { assigneeUserId: actorUserId })
+    return { result: { ok: true } }
   },
 })
 

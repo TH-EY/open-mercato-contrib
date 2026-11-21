@@ -28,6 +28,17 @@ exports the letter, and tracks the statutory deadline. **It never sends anything
 4. Reseed the calendar for another day: `yarn mercato public_info_requests seed-demo-calendar --tenant <id> --org <id> [--today YYYY-MM-DD]`.
 5. Open **Informacja publiczna (UDIP) → Kalendarz wniosków** (switch the UI language to Polish).
 
+## Officers and assignment
+
+- A request can be assigned to anyone holding `public_info_requests.manage` (`GET /api/public_info_requests/assignees`),
+  or left unassigned at registration. Unassigned open requests show a **Przejmij** (claim) button in the calendar
+  and on the case page; the "Tylko nieprzypisane" filter lists them. Claiming fails with 409 when someone else
+  already holds the case; reassignment goes through the officer selector on the case page.
+- For a UDIP-only demo, create a role with just the `public_info_requests.view/manage/approve` features, give it
+  to the officers, and hide every other module through role sidebar preferences (Settings → Sidebar customization
+  or `PUT /api/auth/sidebar/preferences` with `scope: { type: 'role', roleId }` and `hiddenItems`). After changing
+  role preferences run `yarn mercato configs cache structural --all-tenants` so cached sidebars refresh.
+
 ## Verification scripts
 
 - `scripts/udip/verify-samples.mjs` drives the API through the whole flow for every UMB sample,
