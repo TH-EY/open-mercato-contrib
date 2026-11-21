@@ -18,6 +18,7 @@ import {
 } from '../lib/server/requests'
 import {
   actorOf,
+  auditLabel,
   defineRequestCommand,
   emitRequestSideEffects,
   ensureScope,
@@ -110,7 +111,7 @@ const createRequestCommand: CommandHandler<Record<string, unknown>, { id: string
   buildLog: async ({ result, ctx }) => {
     const scope = ensureScope(ctx)
     return {
-      actionLabel: 'Register public-information request',
+      actionLabel: await auditLabel('public_info_requests.request.create', 'Register public-information request'),
       resourceKind: 'public_info_requests.request',
       resourceId: result.id,
       tenantId: scope.tenantId,
@@ -203,7 +204,7 @@ const deleteRequestCommand: CommandHandler<{ body?: Record<string, unknown>; que
   buildLog: async ({ snapshots, result }) => {
     const before = snapshots.before as RequestSnapshot | undefined
     return {
-      actionLabel: 'Delete public-information request',
+      actionLabel: await auditLabel('public_info_requests.request.delete', 'Delete public-information request'),
       resourceKind: 'public_info_requests.request',
       resourceId: result.id,
       tenantId: before?.tenantId ?? null,

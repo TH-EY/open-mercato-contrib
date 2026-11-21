@@ -241,7 +241,9 @@ function resolveOptions(options?: PiiRuleOptions): ResolvedOptions {
 function detectPesel(text: string): PiiSpan[] {
   const spans: PiiSpan[] = []
   for (const match of text.matchAll(/(?<!\d)\d{11}(?!\d)/g)) {
+    const labelled = /pesel\W{0,6}$/i.test(text.slice(Math.max(0, match.index - 15), match.index))
     if (isValidPesel(match[0])) spans.push(makeSpan(text, match.index, match.index + match[0].length, 'pesel', 0.95))
+    else if (labelled) spans.push(makeSpan(text, match.index, match.index + match[0].length, 'pesel', 0.7))
   }
   return spans
 }

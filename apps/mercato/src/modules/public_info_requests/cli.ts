@@ -66,4 +66,6 @@ const importArchiveCommand: ModuleCli = {
   },
 }
 
-export default [seedDefaults, seedCalendar, importArchiveCommand]
+const commands = [seedDefaults, seedCalendar, importArchiveCommand]
+
+export default commands

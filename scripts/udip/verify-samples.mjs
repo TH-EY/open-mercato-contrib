@@ -198,8 +198,45 @@ async function runSample(seq, files) {
   return { seq, pass, steps, caseNumber, requestId }
 }
 
-async function anonymisationProbe(departmentQueryId, requestId) {
-  return { departmentQueryId, requestId }
+async function anonymisationProbe() {
+  const requestId = randomUUID()
+  const today = new Date().toISOString().slice(0, 10)
+  const { caseNumber } = await call('GET', `/api/public_info_requests/case-number?year=${new Date().getFullYear()}`)
+  await call('POST', '/api/public_info_requests/requests', {
+    id: requestId, caseNumber, channel: 'email', receivedAt: today, requesterName: 'Fundacja Testowa', requesterKind: 'organisation',
+    deliveryForm: 'email', subjectSummary: 'Kierownik robót na budowie kompleksu sportowego', points: [{ position: 1, text: 'Czy wskazana osoba pełniła funkcję kierownika robót?' }],
+  })
+  const routing = await call('GET', `/api/public_info_requests/requests/${requestId}/routing-suggest`)
+  const accepted = await call('POST', `/api/public_info_requests/requests/${requestId}/routing-accept`, { queries: routing.proposals.slice(0, 1).map((proposal) => ({ departmentId: proposal.departmentId, pointPositions: [1], scopeText: proposal.scopeText })) })
+  const secrets = ['74010112345', '601 234 567', 'marek.olszewski.prywatny@example.com', 'ul. Leśna 8', 'Marek Olszewski']
+  const replyText = [
+    'Wydział Inwestycji Miasta',
+    'W odpowiedzi na zapytanie informuję, że Pan Marek Olszewski, PESEL 74010112345, zam. ul. Leśna 8, 86-005 Białe Błota,',
+    'tel. 601 234 567, e-mail marek.olszewski.prywatny@example.com, pełnił funkcję kierownika robót w okresie 02.01.2020 r. – 15.10.2020 r.',
+    'Sprawę prowadzi insp. Joanna Kwiatkowska, tel. służbowy (52) 58 58 000.',
+  ].join('\n')
+  const form = new FormData()
+  form.set('file', new File([replyText], 'odpowiedz_wim.txt', { type: 'text/plain' }))
+  form.set('requestId', requestId)
+  form.set('kind', 'reply')
+  form.set('departmentQueryId', accepted.queryIds[0])
+  const reply = await call('POST', '/api/public_info_requests/documents', undefined, { form })
+  await call('POST', `/api/public_info_requests/requests/${requestId}/record-reply`, { queryId: accepted.queryIds[0], replyKind: 'answered', receivedAt: today, replyAttachmentIds: [reply.id] })
+  const generated = await call('POST', `/api/public_info_requests/requests/${requestId}/drafts`, { letterType: 'answer' })
+  await call('POST', `/api/public_info_requests/requests/${requestId}/pii-detect`, { draftId: generated.draftId, includeAttachments: true })
+  const detail = await call('GET', `/api/public_info_requests/requests/${requestId}/detail`)
+  const suggested = detail.marks.filter((mark) => mark.state === 'suggested')
+  const blocked = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&draftId=${generated.draftId}`, undefined, { raw: true })
+  for (const mark of suggested) await call('POST', `/api/public_info_requests/requests/${requestId}/mark-decide`, { markId: mark.id, state: 'accepted' })
+  const letter = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&draftId=${generated.draftId}`, undefined, { raw: true })
+  const attachment = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&documentId=${reply.id}`, undefined, { raw: true })
+  const letterText = docxText(Buffer.from(await letter.arrayBuffer()))
+  const attachmentText = docxText(Buffer.from(await attachment.arrayBuffer()))
+  const leaks = secrets.filter((secret) => letterText.includes(secret) || attachmentText.includes(secret))
+  const officialKept = attachmentText.includes('Joanna Kwiatkowska')
+  createdRequestIds.push(requestId)
+  const pass = blocked.status === 409 && leaks.length === 0 && officialKept && suggested.length >= 4
+  return { seq: 'PII', pass, steps: { marks: `${suggested.length} (${[...new Set(suggested.map((mark) => mark.category))].join(',')})`, blockedBeforeDecision: blocked.status, leaks: leaks.join('|') || 'none', publicOfficialKept: officialKept } }
 }
 
 async function main() {
@@ -230,7 +267,15 @@ async function main() {
   for (const result of results) {
     console.log(`${result.pass ? 'PASS' : 'FAIL'}  ${result.seq.padEnd(4)} ${Object.entries(result.steps).map(([key, value]) => `${key}=${value}`).join(' | ')}`)
   }
-  void anonymisationProbe
+  if (!only || only.includes('PII')) {
+    try {
+      results.push(await anonymisationProbe())
+    } catch (error) {
+      results.push({ seq: 'PII', pass: false, steps: { error: String(error.message ?? error).slice(0, 300) } })
+    }
+    const last = results[results.length - 1]
+    console.log(`${last.pass ? 'PASS' : 'FAIL'}  ${last.seq.padEnd(4)} ${Object.entries(last.steps).map(([key, value]) => `${key}=${value}`).join(' | ')}`)
+  }
   if (process.env.UDIP_KEEP !== 'true') {
     for (const id of createdRequestIds) {
       await call('DELETE', `/api/public_info_requests/requests?id=${id}`).catch(() => null)

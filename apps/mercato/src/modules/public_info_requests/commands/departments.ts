@@ -9,7 +9,7 @@ import { CrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { PublicInfoDepartment, PublicInfoSettings } from '../data/entities'
 import { departmentCreateSchema, departmentUpdateSchema, settingsUpdateSchema } from '../data/validators'
 import { DEPARTMENT_ENTITY_ID, loadSettings } from '../lib/server/requests'
-import { ensureScope, snapshotRow } from './shared'
+import { auditLabel, ensureScope, snapshotRow } from './shared'
 
 export const departmentCrudEvents: CrudEventsConfig<PublicInfoDepartment> = {
   module: 'public_info_requests',
@@ -98,7 +98,7 @@ const createDepartment: CommandHandler<Record<string, unknown>, { id: string }> 
   buildLog: async ({ result, ctx }) => {
     const scope = ensureScope(ctx)
     return {
-      actionLabel: 'Create UDIP department',
+      actionLabel: await auditLabel('public_info_requests.department.create', 'Create UDIP department'),
       resourceKind: 'public_info_requests.department',
       resourceId: result.id,
       tenantId: scope.tenantId,
@@ -145,7 +145,7 @@ const updateDepartment: CommandHandler<Record<string, unknown>, { id: string }> 
   buildLog: async ({ result, snapshots }) => {
     const before = snapshots.before as DepartmentSnapshot | undefined
     return {
-      actionLabel: 'Update UDIP department',
+      actionLabel: await auditLabel('public_info_requests.department.update', 'Update UDIP department'),
       resourceKind: 'public_info_requests.department',
       resourceId: result.id,
       tenantId: before?.tenantId ?? null,
@@ -188,7 +188,7 @@ const deleteDepartment: CommandHandler<{ body?: Record<string, unknown>; query?:
   buildLog: async ({ result, ctx }) => {
     const scope = ensureScope(ctx)
     return {
-      actionLabel: 'Delete UDIP department',
+      actionLabel: await auditLabel('public_info_requests.department.delete', 'Delete UDIP department'),
       resourceKind: 'public_info_requests.department',
       resourceId: result.id,
       tenantId: scope.tenantId,
@@ -232,7 +232,7 @@ const updateSettings: CommandHandler<Record<string, unknown>, { ok: true }> = {
   buildLog: async ({ snapshots, ctx }) => {
     const scope = ensureScope(ctx)
     return {
-      actionLabel: 'Update UDIP settings',
+      actionLabel: await auditLabel('public_info_requests.settings.update', 'Update UDIP settings'),
       resourceKind: 'public_info_requests.settings',
       resourceId: scope.organizationId,
       tenantId: scope.tenantId,

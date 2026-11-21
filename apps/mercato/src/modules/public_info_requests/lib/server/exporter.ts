@@ -35,19 +35,19 @@ function wrapPdfHtml(body: string): string {
 }
 
 async function toDocx(html: string): Promise<Uint8Array> {
-  const module = (await import('@open-mercato/documents/modules/documents/lib/docxRenderer')) as unknown as {
+  const renderer = (await import('@open-mercato/documents/modules/documents/lib/docxRenderer')) as unknown as {
     renderDocxWithCapacity: (input: string) => Promise<Uint8Array>
   }
-  return module.renderDocxWithCapacity(html)
+  return renderer.renderDocxWithCapacity(html)
 }
 
 async function toPdf(html: string): Promise<Uint8Array> {
   const executablePath = resolveChromiumPath()
   if (!executablePath) throw new CrudHttpError(501, { error: 'PDF export requires a Chromium executable', code: 'pdf_unavailable' })
-  const module = (await import('@open-mercato/documents/modules/documents/lib/pdfRenderer')) as unknown as {
+  const renderer = (await import('@open-mercato/documents/modules/documents/lib/pdfRenderer')) as unknown as {
     renderPdfWithChromium: (input: { html: string; executablePath: string; isAllowedRequest: (request: { url: string }) => boolean }) => Promise<Uint8Array>
   }
-  return module.renderPdfWithChromium({ html: wrapPdfHtml(html), executablePath, isAllowedRequest: () => false })
+  return renderer.renderPdfWithChromium({ html: wrapPdfHtml(html), executablePath, isAllowedRequest: () => false })
 }
 
 function fileResponse(bytes: Uint8Array | string, fileName: string, contentType: string): Response {

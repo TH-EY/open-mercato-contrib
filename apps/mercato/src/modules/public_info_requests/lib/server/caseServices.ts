@@ -287,6 +287,12 @@ export type LetterOptions = {
   clarificationDepartmentName?: string
 }
 
+function lowerFirst(value: string): string {
+  if (value.length < 2) return value
+  const second = value[1]
+  return second === second.toLowerCase() ? value[0].toLowerCase() + value.slice(1) : value
+}
+
 function genitiveEntityName(name: string): string {
   const replacements: Array<[RegExp, string]> = [
     [/^Zarząd\b/, 'Zarządu'],
@@ -333,7 +339,7 @@ export async function buildLetterContext(params: {
     salutation: salutationFor(request, options.salutation),
     requestDate: request.letterDate ?? null,
     receivedAt: request.receivedAt,
-    subjectSummary: request.subjectSummary,
+    subjectSummary: lowerFirst(request.subjectSummary),
     points: points.map((point) => ({ position: point.position, text: point.text })),
     departments: params.departmentNames,
     ...(referral ? { referral } : {}),

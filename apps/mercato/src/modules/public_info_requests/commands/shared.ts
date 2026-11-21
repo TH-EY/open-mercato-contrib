@@ -6,6 +6,7 @@ import { emitCrudSideEffects, emitCrudUndoSideEffects } from '@open-mercato/shar
 import type { CrudEmitContext, CrudEventsConfig, CrudIndexerConfig } from '@open-mercato/shared/lib/crud/types'
 import type { DataEngine } from '@open-mercato/shared/lib/data/engine'
 import { CrudHttpError } from '@open-mercato/shared/lib/crud/errors'
+import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { assertOptimisticLock } from '@open-mercato/shared/lib/crud/optimistic-lock-command'
 import {
   PublicInfoDepartmentQuery,
@@ -78,6 +79,15 @@ export const requestCrudIndexer: CrudIndexerConfig<PublicInfoRequest> = {
     tenantId: emitCtx.identifiers.tenantId,
     organizationId: emitCtx.identifiers.organizationId,
   }),
+}
+
+export async function auditLabel(commandId: string, fallback: string): Promise<string> {
+  try {
+    const { translate } = await resolveTranslations()
+    return translate(`public_info_requests.audit.${commandId.replace('public_info_requests.', '')}`, fallback)
+  } catch {
+    return fallback
+  }
 }
 
 export function ensureScope(ctx: CommandRuntimeContext): Scope {
@@ -202,7 +212,7 @@ export function defineRequestCommand<TInput extends { id: string; expectedUpdate
       const before = snapshots.before as RequestSnapshot | undefined
       const outcome = (result as { __outcome?: StoredOutcome }).__outcome
       return {
-        actionLabel: options.label,
+        actionLabel: await auditLabel(options.id, options.label),
         resourceKind: 'public_info_requests.request',
         resourceId: String((input as { id?: string }).id ?? before?.id ?? ''),
         tenantId: before?.tenantId ?? null,

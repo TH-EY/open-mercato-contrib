@@ -43,7 +43,7 @@ describe('PII validators', () => {
 describe('detectPiiByRules', () => {
   it('flags a valid PESEL but not an invalid one or a longer digit run', () => {
     expect(hits('PESEL: 44051401359.', 'pesel')).toEqual(['44051401359'])
-    expect(hits('PESEL: 44051401358.', 'pesel')).toEqual([])
+    expect(hits('Numer 44051401358.', 'pesel')).toEqual([])
     expect(hits('Nr 1440514013591 zamówienia', 'pesel')).toEqual([])
   })
 
@@ -193,5 +193,18 @@ describe('mergeSpans', () => {
 
   it('drops invalid spans', () => {
     expect(mergeSpans([base({ start: 4, end: 2 }), base({ start: 0, end: 50 })], 'short')).toEqual([])
+  })
+})
+
+describe('labelled PESEL with invalid checksum', () => {
+  it('flags an 11-digit number preceded by the PESEL label even when the checksum fails', () => {
+    const text = 'Pan Jan Próbny, PESEL 74010112345, zam. ul. Leśna 8'
+    const spans = detectPiiByRules(text)
+    expect(spans.some((span) => span.category === 'pesel' && span.text === '74010112345')).toBe(true)
+  })
+
+  it('does not flag an unlabelled 11-digit number with an invalid checksum', () => {
+    const spans = detectPiiByRules('Numer referencyjny 74010112345 w systemie')
+    expect(spans.some((span) => span.category === 'pesel')).toBe(false)
   })
 })
