@@ -44,7 +44,7 @@ sign-off workflow, visual PDF redaction, law versioning, notifications, statisti
 
 ## Progress
 
-PR: #9 (TH-EY/open-mercato-contrib)
+PR: none — draft #9 closed at the user's request; work stays on branch feat/udip-request-desk
 
 > Convention: `- [ ]` pending, `- [x]` done. Append ` — <commit sha>` when a step lands. Do not rename step titles.
 
