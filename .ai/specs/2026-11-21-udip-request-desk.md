@@ -961,6 +961,23 @@ implementation.
 
 ## Changelog
 ### 2026-11-21
+- Implemented as the app module `apps/mercato/src/modules/public_info_requests/` (plan:
+  `.ai/runs/2026-11-21-udip-request-desk.md`). All 10 UMB samples and an anonymisation probe
+  pass `scripts/udip/verify-samples.mjs`. Deviations from the spec:
+  - Similar requests use an in-module TF-IDF cosine over stemmed archive text instead of the
+    search module. That is enough for the demo archive and needs no vector provider.
+  - Case actions are flattened into `POST /api/public_info_requests/requests/{id}/{action}`
+    routes, each backed by an undoable command.
+  - Uploaded files are tracked by a `PublicInfoDocument` entity that links attachments to the
+    case, its kind (request, reply, other) and the extracted text.
+  - Scans are read with local Tesseract (`pdftoppm` + `tesseract`, `PUBLIC_INFO_TESSDATA_DIR`)
+    when the attachments module returns no text. The handwritten sample 16/2026 falls back to
+    manual typing.
+  - Export and "record as sent" require a draft marked as prepared, whose current paragraph
+    hashes passed the personal data check (`letterOptions.piiChecked`), with all suggestions
+    decided. Edited paragraphs are re-checked automatically.
+  - Without an AI provider, every assistant step runs deterministically: heuristic intake,
+    keyword and contract-code routing, template drafting and PII rules with checksums.
 - Revised after an independent review:
   - client-generated request id for intake;
   - status transition table;
