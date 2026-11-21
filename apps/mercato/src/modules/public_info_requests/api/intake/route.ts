@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         )
       : []
     const isLowConfidence = (document: PublicInfoDocument) =>
-      !document.extractedText?.trim() || (document.textSource === 'ocr_tesseract' && document.ocrConfidence != null && document.ocrConfidence < LOW_OCR_CONFIDENCE)
+      !document.extractedText?.trim() || ((document.textSource === 'ocr_tesseract' || document.textSource === 'ocr_llm') && document.ocrConfidence != null && document.ocrConfidence < LOW_OCR_CONFIDENCE)
     if (documents.length > 0) {
       text = text || documents.map((document) => document.extractedText?.trim() ?? '').filter(Boolean).join('\n\n')
       const scanned = documents.filter((document) => document.textSource === 'ocr_tesseract')

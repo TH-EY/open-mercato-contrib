@@ -29,6 +29,32 @@ exports the letter, and tracks the statutory deadline. **It never sends anything
 4. Reseed the calendar for another day: `yarn mercato public_info_requests seed-demo-calendar --tenant <id> --org <id> [--today YYYY-MM-DD]`.
 5. Open **Informacja publiczna (UDIP) → Kalendarz wniosków** (switch the UI language to Polish).
 
+## Scan transcription fallback (Claude)
+
+Uploads are read locally first: the PDF text layer (`pdftotext`), then Tesseract for scans. When
+Tesseract finds too little text or scores below `PUBLIC_INFO_OCR_FALLBACK_THRESHOLD` (default
+`0.6`), the page images (up to 4 pages, JPEG at 150 dpi) go to the
+`public_info_requests.ocr_transcriber` agent through the standard AI assistant runtime
+(`runAiAgentObject`). The agent transcribes the letter and reports its own confidence; its text is
+stored with the source `ocr_llm`. If the call fails or the model says the scan is illegible, the
+Tesseract result is kept.
+
+The fallback runs only when the provider's key is present. Add this to `apps/mercato/.env` and
+restart the dev server:
+
+```
+ANTHROPIC_API_KEY=…                     # enables the fallback
+# optional
+PUBLIC_INFO_OCR_PROVIDER=anthropic      # any configured AI provider id
+PUBLIC_INFO_OCR_MODEL=claude-sonnet-4-6 # default for anthropic
+PUBLIC_INFO_OCR_FALLBACK_THRESHOLD=0.6
+PUBLIC_INFO_OCR_FALLBACK=false          # switch the fallback off
+```
+
+The key also lets the other UDIP agents (intake, routing, drafting, PII) refine their steps when
+`OM_AI_PROVIDER` points at a configured provider; `PUBLIC_INFO_AI_DISABLED=true` turns every AI
+step off.
+
 ## Officers and assignment
 
 - A request can be assigned to anyone holding `public_info_requests.manage` (`GET /api/public_info_requests/assignees`),

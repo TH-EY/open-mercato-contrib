@@ -1,5 +1,11 @@
 import { z } from 'zod'
 
+export const ocrTranscriberOutputSchema = z.object({
+  text: z.string(),
+  confidence: z.number().min(0).max(1),
+  legible: z.boolean(),
+})
+
 export const intakeExtractorOutputSchema = z.object({
   requesterName: z.string().nullable(),
   requesterKind: z.enum(['person', 'organisation', 'media', 'councillor']),

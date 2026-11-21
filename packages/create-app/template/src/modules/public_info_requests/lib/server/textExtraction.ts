@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
@@ -12,7 +12,24 @@ const run = promisify(execFile)
 
 const MIN_TEXT_LAYER_CHARS = 40
 const MAX_OCR_PAGES = 10
+const MAX_TRANSCRIPTION_PAGES = 4
+const MAX_TRANSCRIPTION_IMAGE_BYTES = 4 * 1024 * 1024
+const DEFAULT_OCR_FALLBACK_THRESHOLD = 0.6
 const EXEC_TIMEOUT_MS = 120_000
+
+export type ScanImage = { mediaType: string; data: Buffer }
+
+export type ScanTranscriber = (images: ScanImage[]) => Promise<{ text: string; confidence: number } | null>
+
+export function ocrFallbackThreshold(): number {
+  const configured = Number(process.env.PUBLIC_INFO_OCR_FALLBACK_THRESHOLD)
+  return Number.isFinite(configured) && configured > 0 && configured <= 1 ? configured : DEFAULT_OCR_FALLBACK_THRESHOLD
+}
+
+export function needsTranscriptionFallback(result: { text: string | null; confidence: number | null }, threshold = ocrFallbackThreshold()): boolean {
+  if (!result.text || result.text.replace(/\s+/g, '').length < MIN_TEXT_LAYER_CHARS) return true
+  return result.confidence !== null && result.confidence < threshold
+}
 
 export type ExtractedText = {
   text: string | null
@@ -184,6 +201,50 @@ async function ocrImages(toolchain: OcrToolchain, imagePaths: string[]): Promise
   return { text: pages.join('\n\n').trim(), confidence }
 }
 
+async function renderForTranscription(workDir: string, filePath: string, pdf: boolean, input: { buffer: Buffer; mimeType: string | null; fileName: string }): Promise<ScanImage[]> {
+  if (!pdf) {
+    if (input.buffer.length > MAX_TRANSCRIPTION_IMAGE_BYTES) return []
+    const mediaType = input.mimeType && input.mimeType.startsWith('image/') ? input.mimeType : extensionOf(input.fileName) === '.png' ? 'image/png' : 'image/jpeg'
+    return [{ mediaType, data: input.buffer }]
+  }
+  const pdftoppm = binary('pdftoppm', 'PUBLIC_INFO_PDFTOPPM_BIN')
+  const prefix = path.join(workDir, 'transcribe')
+  try {
+    await run(pdftoppm, ['-jpeg', '-jpegopt', 'quality=80', '-r', '150', '-scale-to', '1800', '-l', String(MAX_TRANSCRIPTION_PAGES), filePath, prefix], { timeout: EXEC_TIMEOUT_MS })
+  } catch (error) {
+    logger.warn('page rendering for transcription failed', { error })
+    return []
+  }
+  const names = (await readdir(workDir)).filter((name) => name.startsWith('transcribe') && name.endsWith('.jpg')).sort()
+  const images: ScanImage[] = []
+  for (const name of names) {
+    const data = await readFile(path.join(workDir, name))
+    if (data.length <= MAX_TRANSCRIPTION_IMAGE_BYTES) images.push({ mediaType: 'image/jpeg', data })
+  }
+  return images
+}
+
+async function transcribeWithFallback(
+  transcribe: ScanTranscriber | undefined,
+  workDir: string,
+  filePath: string,
+  pdf: boolean,
+  input: { buffer: Buffer; mimeType: string | null; fileName: string },
+): Promise<ExtractedText | null> {
+  if (!transcribe) return null
+  const images = await renderForTranscription(workDir, filePath, pdf, input)
+  if (images.length === 0) return null
+  try {
+    const result = await transcribe(images)
+    const text = result ? normalizeExtractedText(result.text) : ''
+    if (!result || !text) return null
+    return { text, source: 'ocr_llm', ocrConfidence: result.confidence }
+  } catch (error) {
+    logger.warn('transcription fallback failed', { error })
+    return null
+  }
+}
+
 async function ocrFile(toolchain: OcrToolchain, workDir: string, filePath: string, pdf: boolean) {
   if (!pdf) return ocrImages(toolchain, [filePath])
   if (!toolchain.pdftoppm) return { text: '', confidence: null }
@@ -196,7 +257,7 @@ async function ocrFile(toolchain: OcrToolchain, workDir: string, filePath: strin
   return ocrImages(toolchain, images)
 }
 
-export async function extractDocumentText(input: { buffer: Buffer; fileName: string; mimeType: string | null }): Promise<ExtractedText> {
+export async function extractDocumentText(input: { buffer: Buffer; fileName: string; mimeType: string | null; transcribe?: ScanTranscriber }): Promise<ExtractedText> {
   const extension = extensionOf(input.fileName)
   if (extension === '.eml' || input.mimeType === 'message/rfc822') {
     return { text: extractEmailText(input.buffer.toString('utf8')), source: 'email', ocrConfidence: null }
@@ -225,8 +286,18 @@ export async function extractDocumentText(input: { buffer: Buffer; fileName: str
       if (!pdf) return { text: extracted, source: extracted ? 'docx' : 'none', ocrConfidence: null }
     }
     const toolchain = await resolveOcrToolchain()
-    if (!toolchain) return { text: null, source: 'none', ocrConfidence: null }
-    const result = await ocrFile(toolchain, workDir, filePath, pdf)
+    let result: { text: string; confidence: number | null } = { text: '', confidence: null }
+    if (toolchain) {
+      try {
+        result = await ocrFile(toolchain, workDir, filePath, pdf)
+      } catch (error) {
+        logger.warn('local OCR failed', { error })
+      }
+    }
+    if (needsTranscriptionFallback({ text: result.text || null, confidence: result.confidence })) {
+      const transcribed = await transcribeWithFallback(input.transcribe, workDir, filePath, pdf, input)
+      if (transcribed) return transcribed
+    }
     if (!result.text) return { text: null, source: 'none', ocrConfidence: result.confidence }
     return { text: result.text, source: 'ocr_tesseract', ocrConfidence: result.confidence }
   } catch (error) {

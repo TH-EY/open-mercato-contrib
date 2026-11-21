@@ -11,7 +11,7 @@ export type AssistantStatus = {
   provider: string | null
   model: string | null
   offline: boolean
-  ocr: 'tesseract' | 'llm' | 'none'
+  ocr: 'tesseract' | 'tesseract+llm' | 'llm' | 'none'
 }
 
 function hasValue(name: string): boolean {
@@ -31,6 +31,22 @@ export function isAssistantConfigured(): boolean {
   )
 }
 
+const PROVIDER_KEY_ENV: Record<string, string[]> = {
+  anthropic: ['ANTHROPIC_API_KEY', 'OPENCODE_ANTHROPIC_API_KEY'],
+  openai: ['OPENAI_API_KEY'],
+  google: ['GOOGLE_GENERATIVE_AI_API_KEY'],
+}
+
+export function ocrFallbackProvider(): string {
+  return process.env.PUBLIC_INFO_OCR_PROVIDER?.trim() || 'anthropic'
+}
+
+export function isOcrFallbackConfigured(): boolean {
+  if (process.env.PUBLIC_INFO_AI_DISABLED === 'true' || process.env.PUBLIC_INFO_OCR_FALLBACK === 'false') return false
+  const keys = PROVIDER_KEY_ENV[ocrFallbackProvider()]
+  return keys ? keys.some(hasValue) : isAssistantConfigured()
+}
+
 export function describeAssistantStatus(ocrAvailable = false): AssistantStatus {
   const provider = process.env.OM_AI_PROVIDER?.trim() || null
   const configured = isAssistantConfigured()
@@ -39,7 +55,7 @@ export function describeAssistantStatus(ocrAvailable = false): AssistantStatus {
     provider: configured ? provider : null,
     model: configured ? process.env.PUBLIC_INFO_AI_MODEL?.trim() || process.env.OM_AI_MODEL?.trim() || null : null,
     offline: !configured || (provider !== null && LOCAL_PROVIDERS.has(provider)),
-    ocr: ocrAvailable ? 'tesseract' : hasValue('OPENAI_API_KEY') ? 'llm' : 'none',
+    ocr: ocrAvailable ? (isOcrFallbackConfigured() ? 'tesseract+llm' : 'tesseract') : isOcrFallbackConfigured() ? 'llm' : 'none',
   }
 }
 
@@ -55,9 +71,14 @@ type RbacServiceLike = {
   getGrantedFeatures: (userId: string, scope: { tenantId: string | null; organizationId: string | null }) => Promise<string[]>
 }
 
+export type AssistantMessagePart = { type: 'text'; text: string } | { type: 'file'; mediaType: string; url: string; filename?: string }
+
 export type AssistantCallInput<T> = {
   agentId: string
   prompt: string
+  messageParts?: AssistantMessagePart[]
+  providerOverride?: string
+  modelOverride?: string
   schemaName: string
   schema: ZodType<T>
   container: AwilixContainer
@@ -91,7 +112,9 @@ export async function runAssistantObject<T>(input: AssistantCallInput<T>): Promi
     }
     const result = await runtime.runAiAgentObject({
       agentId: input.agentId,
-      input: input.prompt,
+      input: input.messageParts && input.messageParts.length > 0
+        ? [{ id: 'udip-input', role: 'user', parts: [{ type: 'text', text: input.prompt }, ...input.messageParts] }]
+        : input.prompt,
       authContext: {
         tenantId: input.scope.tenantId,
         organizationId: input.scope.organizationId,
@@ -101,7 +124,8 @@ export async function runAssistantObject<T>(input: AssistantCallInput<T>): Promi
       },
       container: input.container,
       ...(input.attachmentIds && input.attachmentIds.length > 0 ? { attachmentIds: input.attachmentIds } : {}),
-      ...(process.env.PUBLIC_INFO_AI_MODEL ? { modelOverride: process.env.PUBLIC_INFO_AI_MODEL } : {}),
+      ...(input.providerOverride ? { providerOverride: input.providerOverride } : {}),
+      ...(input.modelOverride ? { modelOverride: input.modelOverride } : process.env.PUBLIC_INFO_AI_MODEL ? { modelOverride: process.env.PUBLIC_INFO_AI_MODEL } : {}),
       output: { schemaName: input.schemaName, schema: input.schema, mode: 'generate' },
     })
     const parsed = input.schema.safeParse(result.object)

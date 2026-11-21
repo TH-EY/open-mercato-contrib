@@ -2,6 +2,7 @@ import type { AiAgentDefinition } from '@open-mercato/ai-assistant/modules/ai_as
 import {
   drafterOutputSchema,
   intakeExtractorOutputSchema,
+  ocrTranscriberOutputSchema,
   piiDetectorOutputSchema,
   routerOutputSchema,
 } from './data/ai-schemas'
@@ -109,6 +110,34 @@ const piiAgent: AiAgentDefinition = {
   domain: 'public_info_requests',
 }
 
-export const aiAgents: AiAgentDefinition[] = [intakeAgent, routerAgent, drafterAgent, piiAgent]
+export const OCR_DEFAULT_PROVIDER = 'anthropic'
+export const OCR_DEFAULT_MODEL = 'claude-sonnet-4-6'
+
+const ocrAgent: AiAgentDefinition = {
+  id: 'public_info_requests.ocr_transcriber',
+  moduleId: MODULE_ID,
+  label: 'UDIP scan transcriber',
+  description: 'Transcribes scanned or handwritten public-information requests when local OCR (Tesseract) cannot read them reliably.',
+  systemPrompt: [
+    'Przepisujesz zeskanowane pisma (również odręczne, pisane drukowanymi literami) skierowane do Urzędu Miasta Bydgoszczy.',
+    'Zwróć dokładną transkrypcję treści pisma po polsku, z polskimi znakami i poprawną ortografią, zachowując podział na wiersze i akapity: nadawca, miejscowość i data, adresat, treść, podpis.',
+    'Nie poprawiaj sensu, nie streszczaj i nie dopisuj niczego od siebie. Pieczęci wpływu, naklejek z kodem kreskowym i numerów kancelaryjnych nie włączaj do treści.',
+    'Fragmenty zaczernione lub zanonimizowane pomiń. Słowo, którego nie da się odczytać, zastąp znacznikiem [nieczytelne].',
+    'confidence (0–1) to Twoja ocena, jaka część treści została odczytana pewnie; legible = false, gdy pisma nie da się sensownie odczytać.',
+  ].join('\n'),
+  allowedTools: [],
+  executionMode: 'object',
+  readOnly: true,
+  mutationPolicy: 'read-only',
+  requiredFeatures: FEATURES,
+  acceptedMediaTypes: ['image', 'pdf'],
+  defaultProvider: OCR_DEFAULT_PROVIDER,
+  defaultModel: OCR_DEFAULT_MODEL,
+  output: { schemaName: 'UdipScanTranscription', schema: ocrTranscriberOutputSchema, mode: 'generate' },
+  keywords: ['udip', 'ocr', 'skan', 'pismo odręczne'],
+  domain: 'public_info_requests',
+}
+
+export const aiAgents: AiAgentDefinition[] = [intakeAgent, routerAgent, drafterAgent, piiAgent, ocrAgent]
 
 export default aiAgents

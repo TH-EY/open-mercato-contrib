@@ -11,7 +11,10 @@ import { PublicInfoDocument, type PublicInfoDocumentKind } from '../../data/enti
 import { handleRoute, resolveRouteContext } from '../../lib/server/routeContext'
 import { REQUEST_ENTITY_ID } from '../../lib/server/requests'
 import { ensurePublicInfoPartition, PUBLIC_INFO_PARTITION_CODE } from '../../lib/server/partition'
-import { extractDocumentText } from '../../lib/server/textExtraction'
+import { extractDocumentText, type ScanTranscriber } from '../../lib/server/textExtraction'
+import { isOcrFallbackConfigured, ocrFallbackProvider, runAssistantObject } from '../../lib/server/assistant'
+import { ocrTranscriberOutputSchema } from '../../data/ai-schemas'
+import { OCR_DEFAULT_MODEL, OCR_DEFAULT_PROVIDER } from '../../ai-agents'
 import { jsonMethodDoc } from '../openapi'
 
 export const metadata = {
@@ -101,7 +104,31 @@ export async function POST(req: Request) {
 
     const buffer = Buffer.from(await file.arrayBuffer())
     const mimeType = file.type || null
-    const extracted = await extractDocumentText({ buffer, fileName: file.name, mimeType })
+    const transcribe: ScanTranscriber | undefined = isOcrFallbackConfigured()
+      ? async (images) => {
+          const provider = ocrFallbackProvider()
+          const model = process.env.PUBLIC_INFO_OCR_MODEL?.trim() || (provider === OCR_DEFAULT_PROVIDER ? OCR_DEFAULT_MODEL : undefined)
+          const result = await runAssistantObject({
+            agentId: 'public_info_requests.ocr_transcriber',
+            prompt: `Przepisz treść załączonego skanu pisma (${images.length} ${images.length === 1 ? 'strona' : 'strony'}).`,
+            messageParts: images.map((image, index) => ({
+              type: 'file' as const,
+              mediaType: image.mediaType,
+              url: `data:${image.mediaType};base64,${image.data.toString('base64')}`,
+              filename: `strona-${index + 1}`,
+            })),
+            providerOverride: provider,
+            ...(model ? { modelOverride: model } : {}),
+            schemaName: 'UdipScanTranscription',
+            schema: ocrTranscriberOutputSchema,
+            container: routeContext.container,
+            scope: { tenantId: routeContext.tenantId, organizationId: routeContext.organizationId, userId: routeContext.userId },
+          })
+          if (!result || !result.legible) return null
+          return { text: result.text, confidence: result.confidence }
+        }
+      : undefined
+    const extracted = await extractDocumentText({ buffer, fileName: file.name, mimeType, transcribe })
     const em = routeContext.container.resolve('em') as EntityManager
     await ensurePublicInfoPartition(em.fork())
     const documentId = randomUUID()
