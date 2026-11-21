@@ -586,7 +586,7 @@ defineRequestCommand({
     if (input.addToArchive) {
       const points = await loadPoints(em, scope, request.id)
       const letterText = redactParagraphs(draft.paragraphs, marks)
-        .filter((paragraph) => paragraph.kind !== 'closing')
+        .filter((paragraph) => paragraph.kind !== 'closing' && paragraph.kind !== 'note')
         .map((paragraph) => paragraph.text)
         .join('\n\n')
       const requestText = [request.subjectSummary, ...points.map((point) => `${point.position}. ${point.text}`)].join('\n')

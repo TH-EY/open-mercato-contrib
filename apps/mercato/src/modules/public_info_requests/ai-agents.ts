@@ -78,6 +78,7 @@ const drafterAgent: AiAgentDefinition = {
     'Przygotuj akapity odpowiedzi: po jednym akapicie typu point dla każdego pytania (pointPosition = numer pytania), zaczynając od "Ad n".',
     'Każdy akapit z faktami musi wskazywać źródło (attachmentId z przekazanych odpowiedzi wydziałów oraz dosłowny cytat). Liczby, kwoty i daty przepisuj dokładnie ze źródła.',
     'Jeżeli brakuje informacji na dane pytanie, zwróć akapit z pustym tekstem — nie uzupełniaj braków własną wiedzą.',
+    'Akapit typu note to wewnętrzna uwaga dla urzędnika (np. o pominiętych danych osobowych albo o informacji przetworzonej). Nie trafia do wysyłanego pisma — używaj go oszczędnie i nigdy nie umieszczaj w nim treści odpowiedzi.',
   ].join('\n\n'),
   allowedTools: [],
   executionMode: 'object',

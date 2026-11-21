@@ -266,13 +266,15 @@ async function anonymisationProbe() {
   const leaks = secrets.filter((secret) => letterText.includes(secret) || attachmentText.includes(secret))
   const officialKept = attachmentText.includes('Joanna Kwiatkowska')
   createdRequestIds.push(requestId)
-  const pass = blocked.status === 409 && attachmentUnchecked.status === 409 && blockedAfterEdit.status === 409 && reDetected && forgedIgnored && letter.ok && attachment.ok && leaks.length === 0 && officialKept && suggested.length >= 4
+  const draftPending = suggested.some((mark) => mark.targetKind === 'draft')
+  const blockedOk = draftPending ? blocked.status === 409 : blocked.ok
+  const pass = blockedOk && attachmentUnchecked.status === 409 && blockedAfterEdit.status === 409 && reDetected && forgedIgnored && letter.ok && attachment.ok && leaks.length === 0 && officialKept && suggested.length >= 4
   return {
     seq: 'PII',
     pass,
     steps: {
       marks: `${suggested.length} (${[...new Set(suggested.map((mark) => mark.category))].join(',')})`,
-      blockedBeforeDecision: blocked.status,
+      blockedBeforeDecision: draftPending ? blocked.status : `${blocked.status} (draft had no personal data)`,
       attachmentBeforeCheck: attachmentUnchecked.status,
       editReDetected: reDetected,
       blockedAfterEdit: blockedAfterEdit.status,

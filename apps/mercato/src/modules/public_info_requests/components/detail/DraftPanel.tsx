@@ -208,7 +208,8 @@ export default function DraftPanel({ detail, run, pending }: Props) {
               const flagged = paragraph.flags.length > 0 && !paragraph.confirmedBy
               const tone = paragraph.flags.includes('gap') ? 'bg-status-error-bg' : flagged ? 'bg-status-warning-bg' : ''
               return (
-                <div key={paragraph.id} className={`group rounded-md p-2 ${tone}`} data-testid="udip-paragraph" data-flags={paragraph.flags.join(',')}>
+                <div key={paragraph.id} className={`group rounded-md p-2 ${tone} ${paragraph.kind === 'note' ? 'border border-dashed' : ''}`} data-testid="udip-paragraph" data-flags={paragraph.flags.join(',')}>
+                  {paragraph.kind === 'note' ? <div className="mb-1"><StatusBadge variant="info">{t('public_info_requests.draft.internalNote', 'internal note — not part of the letter')}</StatusBadge></div> : null}
                   {isEditing ? (
                     <Textarea rows={Math.max(3, Math.ceil(editing[paragraph.id].length / 90))} value={editing[paragraph.id]} onChange={(event) => setEditing((current) => ({ ...current, [paragraph.id]: event.target.value }))} />
                   ) : (

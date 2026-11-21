@@ -284,3 +284,17 @@ describe('render', () => {
     expect(text).toContain('85-102 Bydgoszcz, ul. Jezuicka 1')
   })
 })
+
+describe('internal notes', () => {
+  it('keeps assistant notes for the officer out of the rendered letter', () => {
+    const paragraphs: DraftParagraph[] = [
+      ...buildTemplateParagraphs('answer', BASE_CONTEXT),
+      { id: 'note-1', kind: 'note', text: 'Uwaga dla urzędnika: pominięto dane osobowe.', contentHash: '', sources: [], flags: [] },
+    ]
+    const text = renderLetterText(paragraphs, BASE_CONTEXT, { letterType: 'answer' })
+    const html = renderLetterHtml(paragraphs, BASE_CONTEXT, { letterType: 'answer' })
+    expect(text).not.toContain('Uwaga dla urzędnika')
+    expect(html).not.toContain('Uwaga dla urzędnika')
+  })
+})
+

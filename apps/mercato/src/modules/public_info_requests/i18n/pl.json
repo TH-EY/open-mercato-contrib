@@ -210,6 +210,7 @@
   "public_info_requests.draft.generate": "Wygeneruj projekt",
   "public_info_requests.draft.generated": "Projekt wygenerowany — sprawdź oznaczone akapity.",
   "public_info_requests.draft.generatedBy": "Źródło projektu",
+  "public_info_requests.draft.internalNote": "notatka wewnętrzna — nie trafia do pisma",
   "public_info_requests.draft.letterType": "Rodzaj pisma",
   "public_info_requests.draft.markReady": "Oznacz jako przygotowany",
   "public_info_requests.draft.none": "Brak projektu. Najpierw wgraj odpowiedzi wydziałów lub wybierz inny rodzaj pisma.",

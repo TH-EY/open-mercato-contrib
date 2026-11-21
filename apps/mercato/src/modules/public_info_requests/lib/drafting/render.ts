@@ -68,8 +68,12 @@ function htmlLines(text: string): string {
   return text.split(/\r?\n/).map(escapeHtml).join('<br>')
 }
 
+export function letterParagraphs<T extends { kind: string }>(paragraphs: T[]): T[] {
+  return paragraphs.filter((paragraph) => paragraph.kind !== 'note')
+}
+
 export function renderLetterHtml(paragraphs: DraftParagraph[], ctx: LetterContext, options?: RenderLetterOptions): string {
-  const parts = buildParts(paragraphs, ctx, options)
+  const parts = buildParts(letterParagraphs(paragraphs), ctx, options)
   const sections: string[] = []
   sections.push(
     `<header class="pir-letter__letterhead"><div class="pir-letter__office" style="font-weight:bold">${escapeHtml(parts.letterhead.officeName)}</div><div class="pir-letter__unit">${escapeHtml(parts.letterhead.unitName)}</div></header>`,
@@ -104,7 +108,7 @@ export function renderLetterHtml(paragraphs: DraftParagraph[], ctx: LetterContex
 }
 
 export function renderLetterText(paragraphs: DraftParagraph[], ctx: LetterContext, options?: RenderLetterOptions): string {
-  const parts = buildParts(paragraphs, ctx, options)
+  const parts = buildParts(letterParagraphs(paragraphs), ctx, options)
   const blocks: string[] = []
   blocks.push(`${parts.letterhead.officeName}\n${parts.letterhead.unitName}`)
   blocks.push(`${parts.dateLine}\n${parts.caseNumber}`)
