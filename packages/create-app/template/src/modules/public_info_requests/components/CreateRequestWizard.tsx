@@ -52,6 +52,7 @@ type SimilarMatch = {
   finalLetterType: string | null
   answerExcerpt: string
   sharedTerms: string[]
+  source?: string
 }
 
 type FormState = {
@@ -441,6 +442,7 @@ export default function CreateRequestWizard() {
           <Alert status="information">
             <AlertDescription>
               {t('public_info_requests.similar.summary', 'Searched {searched} archived requests — {count} similar found.', { searched: similar.searched, count: similar.matches.length })}
+              {similar.matches.length > 0 ? ` ${t('public_info_requests.similar.whereHint', 'Matches come from answered cases and the imported archive. They are listed on the Answer archive page; in the calendar, switch on “Show answered”.')}` : null}
             </AlertDescription>
           </Alert>
           {similar.matches.length === 0 ? (
@@ -478,6 +480,11 @@ export function SimilarMatchCard({ match, selected, onSelect, openHref }: { matc
         <div className="flex items-center gap-3">
           <span className="font-mono text-sm font-semibold">{match.caseNumber}</span>
           <span className="text-xs text-muted-foreground">{formatDate(match.receivedAt)}</span>
+          <StatusBadge variant="neutral">
+            {match.source === 'import'
+              ? t('public_info_requests.similar.fromImport', 'imported archive')
+              : t('public_info_requests.similar.fromAnswered', 'answered case')}
+          </StatusBadge>
         </div>
         <div className="flex items-center gap-2">
           {match.similarity !== null ? <StatusBadge variant={match.similarity >= 0.6 ? 'success' : match.similarity >= 0.35 ? 'warning' : 'neutral'}>{Math.round(match.similarity * 100)}%</StatusBadge> : null}

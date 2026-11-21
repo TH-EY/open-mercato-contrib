@@ -85,7 +85,9 @@ export default function RequestsCalendar() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    const params = new URLSearchParams({ pageSize: '100', sortField: 'currentDueDate', sortDir: 'asc', year, source: 'manual', today })
+    const params = new URLSearchParams({ pageSize: '100', sortField: 'currentDueDate', sortDir: 'asc', year, today })
+    const includeArchive = showClosed || status === 'sent'
+    if (!includeArchive) params.set('source', 'manual')
     if (status !== 'all') params.set('status', status)
     else if (!showClosed) params.set('hideClosed', 'true')
     if (search.trim()) params.set('q', search.trim())
@@ -273,7 +275,10 @@ export default function RequestsCalendar() {
                     onClick={() => router.push(`/backend/public_info_requests/${item.id}`)}
                   >
                     <TableCell className="text-right tabular-nums">{index + 1}</TableCell>
-                    <TableCell className="whitespace-nowrap font-mono text-xs">{item.caseNumber}</TableCell>
+                    <TableCell className="whitespace-nowrap font-mono text-xs">
+                      {item.caseNumber}
+                      {item.source === 'import' ? <StatusBadge variant="neutral" className="ml-2 font-sans">{t('public_info_requests.detail.archived', 'archive')}</StatusBadge> : null}
+                    </TableCell>
                     <TableCell className="max-w-48 truncate">{item.requesterName ?? '—'}</TableCell>
                     <TableCell className="max-w-72 truncate" title={item.subjectSummary}>{item.subjectSummary}</TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">{formatDate(item.receivedAt)}</TableCell>
