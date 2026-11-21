@@ -11,7 +11,7 @@ import {
   type PublicInfoRequestStatus,
 } from '../../data/entities'
 import { DEPARTMENT_SEEDS } from '../seed/departments'
-import { parsePolishDate, parseRequestText } from '../intake/parse'
+import { findLetterDate, parseRequestText } from '../intake/parse'
 import { anonymizeForArchive } from '../pii/redact'
 import { addCalendarDays, todayIso, type IsoDate } from '../deadlines'
 import { computeDeadlines, loadSettings, parseCaseNumber, type Scope } from './requests'
@@ -213,7 +213,7 @@ export async function importArchive(
     const parsedNumber = parseCaseNumber(pair.caseNumber)
     if (!parsedNumber) continue
     const parsed = parseRequestText(requestText.text || responseText, { channel: 'email' })
-    const responseDate = parsePolishDate(responseText) ?? `${parsedNumber.year}-06-30`
+    const responseDate = findLetterDate(responseText) ?? `${parsedNumber.year}-06-30`
     const receivedAt = addCalendarDays(responseDate, -10)
     const deadlines = computeDeadlines(receivedAt, 'calendar')
     const requester = { name: parsed.requesterName, address: parsed.requesterAddress, contact: parsed.requesterContact }

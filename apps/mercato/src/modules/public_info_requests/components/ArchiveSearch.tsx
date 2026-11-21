@@ -17,16 +17,27 @@ export default function ArchiveSearch() {
   const [result, setResult] = React.useState<Result | null>(null)
   const [loading, setLoading] = React.useState(false)
 
-  const search = async () => {
-    if (query.trim().length < 2) return
+  const [browsing, setBrowsing] = React.useState(true)
+
+  const load = React.useCallback(async (text: string) => {
     setLoading(true)
     try {
-      setResult(await getJson<Result>(`/archive?text=${encodeURIComponent(query.trim())}`))
+      const path = text.length >= 2 ? `/archive?text=${encodeURIComponent(text)}` : '/archive?limit=100'
+      setResult(await getJson<Result>(path))
+      setBrowsing(text.length < 2)
     } catch (error) {
       flash(error instanceof Error ? error.message : String(error), 'error')
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  React.useEffect(() => {
+    void load('')
+  }, [load])
+
+  const search = async () => {
+    await load(query.trim())
   }
 
   return (
@@ -44,7 +55,11 @@ export default function ArchiveSearch() {
       {loading ? <LoadingMessage label={t('public_info_requests.common.loading', 'Loading…')} /> : null}
       {result ? (
         <div className="space-y-3">
-          <p className="text-xs text-muted-foreground">{t('public_info_requests.archive.count', '{count} results in {searched} archived cases', { count: result.matches.length, searched: result.searched })}</p>
+          <p className="text-xs text-muted-foreground">
+            {browsing
+              ? t('public_info_requests.archive.all', 'All archived cases ({count}), newest first', { count: result.searched })
+              : t('public_info_requests.archive.count', '{count} results in {searched} archived cases', { count: result.matches.length, searched: result.searched })}
+          </p>
           {result.matches.map((match) => (
             <Link key={match.requestId} href={`/backend/public_info_requests/${match.requestId}`} className="block">
               <SimilarMatchCard match={match} />

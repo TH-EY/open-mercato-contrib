@@ -235,6 +235,13 @@ export function parsePolishDate(value: string): string | null {
 
 const DATE_FRAGMENT = String.raw`(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{4}|\d{1,2}\s+\p{L}+\s+\d{4})`
 
+export function findLetterDate(text: string): string | null {
+  const flattened = text.replace(/\s+/g, ' ')
+  const placeDate = new RegExp(String.raw`\b\p{Lu}\p{Ll}{2,30},\s*(?:dnia\s+)?(${DATE_FRAGMENT})`, 'u')
+  const match = flattened.match(placeDate)
+  return (match ? parsePolishDate(match[1]) : null) ?? parsePolishDate(flattened)
+}
+
 function extractLetterDate(lines: string[]): string | null {
   const placeDate = new RegExp(String.raw`^\p{Lu}[\p{L}\s-]{1,40},\s*(?:dnia\s+)?(${DATE_FRAGMENT})\s*(?:r\.?|roku)?\s*$`, 'u')
   const headerDate = new RegExp(String.raw`^(?:data|wys[lł]ano|sent|date)\s*:\s*.*?(${DATE_FRAGMENT})`, 'iu')

@@ -34,7 +34,7 @@ export type SimilarMatch = {
   caseNumber: string
   receivedAt: string
   subjectSummary: string
-  similarity: number
+  similarity: number | null
   coveredPoints: number[]
   departments: string[]
   finalLetterType: string | null
@@ -149,8 +149,6 @@ export async function findSimilarRequests(
       .map((query) => departmentById.get(query.departmentId))
       .filter((name): name is string => Boolean(name))
     const answer = candidate.archiveText ?? ''
-    const answerStart = answer.indexOf('ODPOWIEDŹ')
-    const excerptSource = answerStart >= 0 ? answer.slice(answerStart + 'ODPOWIEDŹ'.length) : answer
     return {
       requestId: candidate.id,
       caseNumber: candidate.caseNumber,
@@ -160,12 +158,46 @@ export async function findSimilarRequests(
       coveredPoints: Array.from(new Set(coverage.get(hit.id) ?? [])).sort((left, right) => left - right),
       departments: Array.from(new Set(fromQueries.length > 0 ? fromQueries : departmentsMentioned(answer, departments))),
       finalLetterType: candidate.finalLetterType ?? null,
-      answerExcerpt: excerptSource.replace(/\s+/g, ' ').trim().slice(0, 600),
+      answerExcerpt: answerExcerpt(answer),
       sharedTerms: hit.sharedTerms,
       source: candidate.source,
     }
   })
   return { matches, searched: index.size, mode: 'tokens' }
+}
+
+function answerExcerpt(archiveText: string): string {
+  const answerStart = archiveText.indexOf('ODPOWIEDŹ')
+  const excerptSource = answerStart >= 0 ? archiveText.slice(answerStart + 'ODPOWIEDŹ'.length) : archiveText
+  return excerptSource.replace(/\s+/g, ' ').trim().slice(0, 600)
+}
+
+export async function listArchivedRequests(em: EntityManager, scope: Scope, limit: number): Promise<SimilarResult> {
+  const rows = await em.find(
+    PublicInfoRequest,
+    { tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null, archiveText: { $ne: null } } as FilterQuery<PublicInfoRequest>,
+    {
+      fields: ['id', 'caseNumber', 'receivedAt', 'subjectSummary', 'archiveText', 'finalLetterType', 'source', 'status'],
+      orderBy: { receivedAt: 'desc' },
+      limit: 2000,
+    },
+  )
+  const archived = rows.filter((row) => row.status === 'sent' || row.source === 'import')
+  const departments = archived.length > 0 ? await loadDepartments(em, scope, false) : []
+  const matches: SimilarMatch[] = archived.slice(0, limit).map((row) => ({
+    requestId: row.id,
+    caseNumber: row.caseNumber,
+    receivedAt: row.receivedAt,
+    subjectSummary: row.subjectSummary,
+    similarity: null,
+    coveredPoints: [],
+    departments: departmentsMentioned(row.archiveText ?? '', departments),
+    finalLetterType: row.finalLetterType ?? null,
+    answerExcerpt: answerExcerpt(row.archiveText ?? ''),
+    sharedTerms: [],
+    source: row.source,
+  }))
+  return { matches, searched: archived.length, mode: 'tokens' }
 }
 
 export type RoutingSuggestion = {
@@ -197,7 +229,7 @@ export async function suggestRouting(params: {
   )
   const archiveHints: ArchiveHint[] = similar.matches.map((match) => ({
     caseNumber: match.caseNumber,
-    similarity: match.similarity,
+    similarity: match.similarity ?? 0,
     departmentNames: match.departments,
     finalLetterType: match.finalLetterType,
   }))

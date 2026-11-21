@@ -16,7 +16,8 @@ import { FileUploadArea } from '@open-mercato/ui/primitives/file-upload'
 import { Spinner } from '@open-mercato/ui/primitives/spinner'
 import { flash } from '@open-mercato/ui/backend/FlashMessages'
 import { useGuardedMutation } from '@open-mercato/ui/backend/injection/useGuardedMutation'
-import { Trash2, Plus } from 'lucide-react'
+import Link from 'next/link'
+import { ExternalLink, Trash2, Plus } from 'lucide-react'
 import { caseAction, formatDate, getJson, postJson, todayIsoLocal, uploadDocument, type UploadedDocument } from './api'
 import { CHANNELS, DELIVERY_FORMS, REQUESTER_KINDS } from './labels'
 
@@ -45,7 +46,7 @@ type SimilarMatch = {
   caseNumber: string
   receivedAt: string
   subjectSummary: string
-  similarity: number
+  similarity: number | null
   coveredPoints: number[]
   departments: string[]
   finalLetterType: string | null
@@ -376,7 +377,7 @@ export default function CreateRequestWizard() {
           ) : (
             <div className="space-y-3">
               {similar.matches.map((match) => (
-                <SimilarMatchCard key={match.requestId} match={match} selected={choice.matchId === match.requestId} onSelect={() => setChoice((current) => ({ matchId: match.requestId, action: current.action === 'none' ? 'reuse_structure' : current.action }))} />
+                <SimilarMatchCard key={match.requestId} match={match} openHref={`/backend/public_info_requests/${match.requestId}`} selected={choice.matchId === match.requestId} onSelect={() => setChoice((current) => ({ matchId: match.requestId, action: current.action === 'none' ? 'reuse_structure' : current.action }))} />
               ))}
               <div className="space-y-2 rounded-lg border bg-card p-4">
                 <Label>{t('public_info_requests.similar.what', 'What should happen with the selected match?')}</Label>
@@ -398,7 +399,7 @@ export default function CreateRequestWizard() {
   )
 }
 
-export function SimilarMatchCard({ match, selected, onSelect }: { match: SimilarMatch; selected?: boolean; onSelect?: () => void }) {
+export function SimilarMatchCard({ match, selected, onSelect, openHref }: { match: SimilarMatch; selected?: boolean; onSelect?: () => void; openHref?: string }) {
   const t = useT()
   return (
     <div className={`space-y-2 rounded-lg border bg-card p-4 ${selected ? 'border-accent-indigo ring-1 ring-accent-indigo' : ''}`} data-testid="udip-similar-match">
@@ -408,7 +409,12 @@ export function SimilarMatchCard({ match, selected, onSelect }: { match: Similar
           <span className="text-xs text-muted-foreground">{formatDate(match.receivedAt)}</span>
         </div>
         <div className="flex items-center gap-2">
-          <StatusBadge variant={match.similarity >= 0.6 ? 'success' : match.similarity >= 0.35 ? 'warning' : 'neutral'}>{Math.round(match.similarity * 100)}%</StatusBadge>
+          {match.similarity !== null ? <StatusBadge variant={match.similarity >= 0.6 ? 'success' : match.similarity >= 0.35 ? 'warning' : 'neutral'}>{Math.round(match.similarity * 100)}%</StatusBadge> : null}
+          {openHref ? (
+            <Button asChild size="sm" variant="ghost">
+              <Link href={openHref} target="_blank" rel="noopener noreferrer"><ExternalLink className="size-4" />{t('public_info_requests.similar.open', 'Open case')}</Link>
+            </Button>
+          ) : null}
           {onSelect ? <Button type="button" size="sm" variant={selected ? 'default' : 'outline'} onClick={onSelect}>{selected ? t('public_info_requests.similar.selected', 'Selected') : t('public_info_requests.similar.select', 'Select')}</Button> : null}
         </div>
       </div>

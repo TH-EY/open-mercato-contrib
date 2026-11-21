@@ -1,4 +1,4 @@
-import { parsePolishDate, parseRequestText } from '../intake/parse'
+import { findLetterDate, parsePolishDate, parseRequestText } from '../intake/parse'
 
 const NUMBERED_REQUEST = [
   'Bydgoszcz, 19 listopada 2026 r.',
@@ -144,5 +144,17 @@ describe('public_info_requests intake parser', () => {
   it('falls back to the whole body as a single point when there is no explicit request', () => {
     const result = parseRequestText('Informacja o stanie technicznym mostu na ulicy Testowej')
     expect(result.points).toEqual(['Informacja o stanie technicznym mostu na ulicy Testowej'])
+  })
+})
+
+describe('findLetterDate', () => {
+  it('prefers the place-and-date line over dates cited in the body', () => {
+    const answer = 'URZĄD MIASTA BYDGOSZCZY Biuro Komunikacji Społecznej Dz.U. z 20.12.2019 r. poz. 1 Bydgoszcz, 25 września 2026 r. BKS.IV.1431.590.2026'
+    expect(findLetterDate(answer)).toBe('2026-09-25')
+  })
+
+  it('handles the "dnia" form and falls back to the first date', () => {
+    expect(findLetterDate('ustawy z dnia 6 września 2001 r. Bydgoszcz, dnia 10 sierpnia 2026 r.')).toBe('2026-08-10')
+    expect(findLetterDate('pismo z 03.02.2026 r.')).toBe('2026-02-03')
   })
 })
