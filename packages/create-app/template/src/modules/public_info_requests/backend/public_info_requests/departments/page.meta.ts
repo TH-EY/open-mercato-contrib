@@ -6,6 +6,6 @@ export const metadata = {
   pageGroup: 'Public information (UDIP)',
   pageGroupKey: 'public_info_requests.nav.group',
   pageOrder: 130,
-  icon: 'building-2',
+  icon: 'building2',
   breadcrumb: [{ label: 'Departments and scopes', labelKey: 'public_info_requests.nav.departments' }],
 }

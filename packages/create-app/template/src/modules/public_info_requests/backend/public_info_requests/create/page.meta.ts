@@ -6,7 +6,7 @@ export const metadata = {
   pageGroup: 'Public information (UDIP)',
   pageGroupKey: 'public_info_requests.nav.group',
   pageOrder: 110,
-  icon: 'file-plus',
+  icon: 'file-pen-line',
   breadcrumb: [
     { label: 'Request calendar', labelKey: 'public_info_requests.nav.calendar', href: '/backend/public_info_requests' },
     { label: 'Register request', labelKey: 'public_info_requests.nav.create' },
