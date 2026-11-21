@@ -1,0 +1,1601 @@
+<!doctype html>
+<html lang="pl" data-prototype-id="udip-request-desk">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Wnioski UDIP — Urząd Miasta Bydgoszczy — interactive backend prototype</title>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="components.css" />
+<link rel="stylesheet" href="screens.css" />
+<link rel="stylesheet" href="prototype.css" />
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="ic-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></symbol>
+<symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+<symbol id="ic-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+<symbol id="ic-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+<symbol id="ic-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+<symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+<symbol id="ic-more" viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="5" cy="12" r="1.75"/><circle cx="12" cy="12" r="1.75"/><circle cx="19" cy="12" r="1.75"/></symbol>
+<symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></symbol>
+<symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+<symbol id="ic-pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/></symbol>
+<symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+<symbol id="ic-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7H7v7"/><path d="M7 3v5h8"/></symbol>
+<symbol id="ic-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+<symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+<symbol id="ic-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+<symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
+<symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></symbol>
+<symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></symbol>
+<symbol id="ic-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+<symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+<symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></symbol>
+<symbol id="ic-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></symbol>
+<symbol id="ic-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+<symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+<symbol id="ic-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></symbol>
+<symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+<symbol id="ic-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></symbol>
+<symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></symbol>
+<symbol id="ic-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+<symbol id="ic-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/></symbol>
+<symbol id="ic-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><path d="m2 2 20 20"/></symbol>
+<symbol id="ic-archive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+<symbol id="ic-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+<symbol id="ic-route" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v3"/></symbol>
+<symbol id="ic-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></symbol>
+<symbol id="ic-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></symbol>
+<symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+<symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+<symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+<symbol id="ic-external" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+<symbol id="ic-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+<symbol id="ic-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+<symbol id="ic-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+<symbol id="ic-wifi-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h.01"/><path d="M8.5 16.429a5 5 0 0 1 7 0"/><path d="M5 12.859a10 10 0 0 1 5.17-2.69"/><path d="M19 12.859a10 10 0 0 0-2.007-1.523"/><path d="M2 8.82a15 15 0 0 1 4.177-2.643"/><path d="M22 8.82a15 15 0 0 0-11.288-3.764"/><path d="m2 2 20 20"/></symbol>
+<symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+<symbol id="ic-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+</defs></svg>
+
+<div class="doc-toolbar">
+  <strong style="font-size:0.875rem">Wnioski UDIP — prototype</strong>
+  <nav class="screen-nav" aria-label="Screens">
+    <a href="#s1">1 Kalendarz</a>
+    <a href="#s2">2 Miesiąc</a>
+    <a href="#s3">3 Stany puste</a>
+    <a href="#s4">4 Wgranie/OCR</a>
+    <a href="#s5">5 Dane wniosku</a>
+    <a href="#s6">6 Podobne</a>
+    <a href="#s7">7 Ścieżka</a>
+    <a href="#s8">8 Notatka</a>
+    <a href="#s9">9 Sprawa</a>
+    <a href="#s10">10 Odp. wydziału</a>
+    <a href="#s11">11 Projekt</a>
+    <a href="#s12">12 Anonimizacja</a>
+    <a href="#s13">13 Eksport</a>
+    <a href="#s14">14 Kwerenda</a>
+    <a href="#s15">15 Doprecyzowanie</a>
+    <a href="#s16">16 Błędy</a>
+    <a href="#s17">17 Kierownik</a>
+    <a href="#s18">18 Archiwum</a>
+    <a href="#s19">19 Baza wiedzy</a>
+    <a href="#s20">20 Struktura</a>
+    <a href="#s21">21 Terminy</a>
+  </nav>
+  <button class="btn btn-outline btn-sm" id="theme-toggle" type="button">
+    <svg><use href="#ic-sun"/></svg> Theme
+  </button>
+</div>
+
+<div class="doc">
+
+<header class="doc-head">
+  <h1>Wnioski UDIP (Bydgoszcz City Hall) — screen inventory</h1>
+  <p class="muted" style="max-width:75ch;margin:0">
+    A staff-only assistant for Biuro Komunikacji Społecznej that registers public-information
+    requests, finds similar past cases, proposes which departments to ask, assembles and anonymises
+    the answer, and tracks the statutory deadline. Interactive backend screens derived from
+    <code class="t-mono">.ai/prototypes/udip-request-desk.requirements.md</code>. The shell,
+    DataTable chrome and CrudForm layout mirror <code class="t-mono">packages/ui/src/backend/</code>;
+    colours come from <code class="t-mono">globals.css</code>. The demo date is
+    <strong>Monday, 23 November 2026</strong>. All names, addresses and figures are fictional.
+    Department names are illustrative until the official BIP structure is imported.
+  </p>
+  <p class="muted" style="max-width:75ch;margin:0.5rem 0 0">
+    <strong>Main walkthrough:</strong> 1 Calendar → 4 Upload &amp; OCR → 5 Request data → 6 Similar requests →
+    7 Routing proposal → 8 Department note → 9 Case → 10 Department reply → 11 Draft → 12 Anonymisation →
+    13 Export &amp; record sending. The system never sends anything — every outgoing step is
+    "copy / download, then record what you did".
+  </p>
+</header>
+
+<!-- ═════════════════════════════ s1 ═════════════════════════════ -->
+<section class="screen" id="s1">
+  <div class="screen-meta">
+    <h2>1. Kalendarz wniosków — lista</h2>
+    <p>The officer starts the day here: every request of the year, ordered by the deadline that applies now, with today's and tomorrow's deadlines highlighted.</p>
+    <div class="screen-refs"><span class="ref">§5 Epic A</span><span class="ref">US-A1</span><span class="ref">D1</span><span class="ref">D9</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests?year=2026</span></div>
+    <div class="app">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Kalendarz wniosków"></header>
+        <main class="page">
+          <div class="kpis">
+            <div class="card kpi"><span class="t-hint">Po terminie</span><span class="v" style="color:var(--status-error-text)">1</span><span class="t-hint">597/2026 · wydział nie odpowiedział</span></div>
+            <div class="card kpi"><span class="t-hint">Termin dziś</span><span class="v" style="color:var(--status-error-text)">1</span><span class="t-hint">odpowiedź przygotowana — do wysyłki</span></div>
+            <div class="card kpi"><span class="t-hint">Termin jutro</span><span class="v" style="color:var(--status-warning-text)">1</span><span class="t-hint">odpowiedź w przygotowaniu</span></div>
+            <div class="card kpi"><span class="t-hint">Otwarte w 2026</span><span class="v">11</span><span class="t-hint">w tym 1 wstrzymany, 1 kwerenda</span></div>
+          </div>
+
+          <div class="dt">
+            <div class="dt-head">
+              <div class="dt-head-row">
+                <h2 class="t-table-title">Wnioski o udostępnienie informacji publicznej</h2>
+                <div class="dt-head-actions">
+                  <div class="view-switch" role="tablist" aria-label="Widok">
+                    <button type="button" aria-selected="true"><svg><use href="#ic-list"/></svg> Lista</button>
+                    <span class="div"></span>
+                    <button type="button" data-goto="s2"><svg><use href="#ic-calendar"/></svg> Miesiąc</button>
+                  </div>
+                  <button class="btn btn-outline" type="button"><svg><use href="#ic-download"/></svg> Eksport zestawienia</button>
+                  <button class="btn btn-primary" type="button" data-goto="s4"><svg><use href="#ic-plus"/></svg> Zarejestruj wniosek</button>
+                </div>
+              </div>
+              <div class="dt-toolbar">
+                <div class="dt-toolbar-row">
+                  <div class="sidebar-search dt-search"><svg><use href="#ic-search"/></svg> Szukaj: numer, wnioskodawca, temat… <span class="kbd" style="margin-left:auto">/</span></div>
+                  <span class="chip chip-active"><svg><use href="#ic-calendar"/></svg> Rok: 2026 <svg><use href="#ic-chevron-down"/></svg></span>
+                  <span class="chip chip-dashed"><svg><use href="#ic-filter"/></svg> Status</span>
+                  <span class="chip chip-dashed"><svg><use href="#ic-users"/></svg> Prowadzący</span>
+                  <span class="chip">Tylko moje</span>
+                  <span class="chip">Termin ≤ 3 dni</span>
+                  <div class="dt-toolbar-right">
+                    <span class="chip chip-active">Ukryj zakończone</span><span class="chip">Kolumny: + Data odp.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="dt-chips">
+              <div class="legend">
+                <span><i style="background:var(--status-error-solid)"></i>po terminie / termin dziś</span>
+                <span><i style="background:var(--status-warning-solid)"></i>termin jutro</span>
+                <span><i style="background:var(--status-info-bg);border:1px solid var(--status-info-border)"></i>bieg terminu wstrzymany (doprecyzowanie)</span>
+                <span>Sortowanie: termin rosnąco (najpilniejsze na górze)</span>
+              </div>
+            </div>
+            <div class="scroll-x">
+            <table class="table">
+              <thead><tr>
+                <th class="right">Lp.</th><th>Nr sprawy</th><th>Wnioskodawca</th><th>Przedmiot zapytania</th>
+                <th>Wpływ</th><th>Termin</th><th>Pozostało</th><th>Status</th><th>Prow.</th>
+              </tr></thead>
+              <tbody>
+                <tr class="row-overdue clickable" data-goto="s16">
+                  <td class="right num">1</td><td class="t-mono">BKS.IV.1431.597.2026</td><td>Fundacja „Jawna Gmina”</td>
+                  <td><div class="subject ellipsis" title="Koszty kampanii promocyjnej „Bydgoszcz nad Brdą” 2026">Koszty kampanii promocyjnej „Bydgoszcz nad Brdą” 2026</div></td>
+                  <td class="num">06.11.2026</td><td class="num strong">20.11.2026</td>
+                  <td><span class="days days-error"><svg><use href="#ic-warn"/></svg>−3</span></td>
+                  <td><span class="badge badge-info"><span class="dot"></span>Wysłano do wydziałów</span></td><td><span class="avatar avatar-sm">TL</span></td>
+                </tr>
+                <tr class="row-today clickable row-focus" data-goto="s9">
+                  <td class="right num">2</td><td class="t-mono">BKS.IV.1431.600.2026</td><td>Redakcja „Kurier znad Brdy”</td>
+                  <td><div class="subject ellipsis" title="Liczba uczniów cudzoziemców w szkołach podstawowych — stan na 30.09.2026">Liczba uczniów cudzoziemców w szkołach podstawowych — stan na 30.09.2026</div></td>
+                  <td class="num">07.11.2026 <span class="t-hint">(sob.)</span></td><td class="num strong">23.11.2026 <span class="t-hint" title="21.11 to sobota — przesunięto na najbliższy dzień roboczy">↷</span></td>
+                  <td><span class="days days-error">dziś</span></td>
+                  <td><span class="badge badge-success"><span class="dot"></span>Odpowiedź przygotowana</span></td><td><span class="avatar avatar-sm">EN</span></td>
+                </tr>
+                <tr class="row-paused clickable" data-goto="s15">
+                  <td class="right num">3</td><td class="t-mono">BKS.IV.1431.595.2026</td><td>Adam Wierzbicki</td>
+                  <td><div class="subject ellipsis" title="Dokumentacja budowy apartamentowca przy ul. Nadbrzeżnej">Dokumentacja budowy apartamentowca przy ul. Nadbrzeżnej</div></td>
+                  <td class="num">03.11.2026</td><td class="num">odp. do 23.11</td>
+                  <td><span class="days days-info"><svg><use href="#ic-pause"/></svg>wstrz.</span></td>
+                  <td><span class="badge badge-neutral"><span class="dot"></span>Oczekuje na doprecyzowanie</span></td><td><span class="avatar avatar-sm">TL</span></td>
+                </tr>
+                <tr class="row-tomorrow clickable" data-goto="s9">
+                  <td class="right num">4</td><td class="t-mono">BKS.IV.1431.602.2026</td><td>Stowarzyszenie „Zielona Brda”</td>
+                  <td><div class="subject ellipsis" title="Koszty utrzymania fontann miejskich w 2025 r.">Koszty utrzymania fontann miejskich w 2025 r.</div></td>
+                  <td class="num">10.11.2026</td><td class="num strong">24.11.2026</td>
+                  <td><span class="days days-warning">jutro</span></td>
+                  <td><span class="badge badge-warning"><span class="dot"></span>Odpowiedź w przygotowaniu</span></td><td><span class="avatar avatar-sm">MK</span></td>
+                </tr>
+                <tr class="clickable" data-goto="s9">
+                  <td class="right num">5</td><td class="t-mono">BKS.IV.1431.604.2026</td><td>Krzysztof Malinowski</td>
+                  <td><div class="subject ellipsis" title="Zezwolenia na sprzedaż alkoholu wydane w latach 2018–2026">Zezwolenia na sprzedaż alkoholu wydane w latach 2018–2026</div></td>
+                  <td class="num">12.11.2026</td><td class="num">26.11.2026</td>
+                  <td><span class="days">3</span></td>
+                  <td><span class="badge badge-info"><span class="dot"></span>Wysłano do wydziałów <span class="num">1/2</span></span></td><td><span class="avatar avatar-sm">TL</span></td>
+                </tr>
+                <tr class="clickable" data-goto="s9">
+                  <td class="right num">6</td><td class="t-mono">BKS.IV.1431.605.2026</td><td>Fundacja „Jawna Gmina”</td>
+                  <td><div class="subject ellipsis" title="Wynagrodzenia członków zarządów spółek miejskich w 2025 r.">Wynagrodzenia członków zarządów spółek miejskich w 2025 r.</div></td>
+                  <td class="num">13.11.2026</td><td class="num">27.11.2026</td>
+                  <td><span class="days">4</span></td>
+                  <td><span class="badge badge-neutral"><span class="dot"></span>Nowy — brak działań</span></td><td><span class="avatar avatar-sm">MK</span></td>
+                </tr>
+                <tr class="clickable" data-goto="s9">
+                  <td class="right num">7</td><td class="t-mono">BKS.IV.1431.608.2026</td><td>Rada Osiedla Błonie</td>
+                  <td><div class="subject ellipsis" title="Harmonogram remontu ul. Szubińskiej (odcinek przy pętli)">Harmonogram remontu ul. Szubińskiej (odcinek przy pętli)</div></td>
+                  <td class="num">16.11.2026</td><td class="num">30.11.2026</td>
+                  <td><span class="days">7</span></td>
+                  <td><span class="badge badge-info"><span class="dot"></span>Wysłano do wydziałów</span></td><td><span class="avatar avatar-sm">EN</span></td>
+                </tr>
+                <tr class="clickable" data-goto="s9">
+                  <td class="right num">8</td><td class="t-mono">BKS.IV.1431.610.2026</td><td>SM „Słoneczna”</td>
+                  <td><div class="subject ellipsis" title="Liczba mieszkańców wskazanych ulic wg deklaracji odpadowych">Liczba mieszkańców wskazanych ulic wg deklaracji odpadowych</div></td>
+                  <td class="num">17.11.2026</td><td class="num">01.12.2026</td>
+                  <td><span class="days">8</span></td>
+                  <td><span class="badge badge-info"><span class="dot"></span>Wysłano do wydziałów</span></td><td><span class="avatar avatar-sm">TL</span></td>
+                </tr>
+                <tr class="clickable" data-goto="s9">
+                  <td class="right num">9</td><td class="t-mono">BKS.IV.1431.613.2026</td><td>Tomasz Wrzos</td>
+                  <td><div class="subject ellipsis" title="Dokumentacja realizacji umowy nr 41/IT/2024 (system parkingowy)">Dokumentacja realizacji umowy nr 41/IT/2024 (system parkingowy)</div></td>
+                  <td class="num">19.11.2026</td><td class="num">03.12.2026</td>
+                  <td><span class="days">10</span></td>
+                  <td><span class="badge badge-neutral"><span class="dot"></span>Nowy — brak działań</span></td><td><span class="avatar avatar-sm">EN</span></td>
+                </tr>
+                <tr class="clickable" data-goto="s9">
+                  <td class="right num">10</td><td class="t-mono">BKS.IV.1431.615.2026</td><td>Ewelina Sosnowska</td>
+                  <td><div class="subject ellipsis" title="Interwencje Straży Miejskiej dot. hałasu nocnego w 2026 r.">Interwencje Straży Miejskiej dot. hałasu nocnego w 2026 r.</div></td>
+                  <td class="num">20.11.2026</td><td class="num">04.12.2026</td>
+                  <td><span class="days">11</span></td>
+                  <td><span class="badge badge-neutral"><span class="dot"></span>Nowy — brak działań</span></td><td><span class="avatar avatar-sm">MK</span></td>
+                </tr>
+                <tr class="clickable" data-goto="s14">
+                  <td class="right num">11</td><td class="t-mono">BKS.IV.1431.598.2026</td><td>Fundacja „Łapa w Łapę”</td>
+                  <td><div class="subject ellipsis" title="Opieka nad bezdomnymi zwierzętami — umowy i koszty 2025">Opieka nad bezdomnymi zwierzętami — umowy i koszty 2025</div></td>
+                  <td class="num">05.11.2026</td><td class="num">18.12.2026 <span class="t-hint">(z 19.11)</span></td>
+                  <td><span class="days">25</span></td>
+                  <td><span class="badge badge-pink"><span class="dot"></span>Kwerenda +29 dni</span></td><td><span class="avatar avatar-sm">MK</span></td>
+                </tr>
+              </tbody>
+            </table>
+            </div>
+            <div class="dt-foot">
+              <span class="t-hint num">Wyświetlono 1–11 z 11 otwartych (605 zakończonych ukrytych)</span>
+              <ul class="pager"><li><button class="nav" type="button" aria-label="Poprzednia"><svg><use href="#ic-chevron-left"/></svg></button></li><li><button type="button" aria-current="page">1</button></li><li><button class="nav" type="button" aria-label="Następna"><svg><use href="#ic-chevron-right"/></svg></button></li></ul>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>"Pozostało dni" counts down to the deadline that applies now: the original one, the one after an extension, or the new one after a clarification. A paused case shows "wstrzymany" and the reply date instead.</span></div>
+    <div class="note"><b>2</b><span>The ↷ icon means the deadline was moved off a weekend or holiday (KPA art. 57 §4). Hovering shows why. Counting is configurable (s21), with calendar days by default.</span></div>
+    <div class="note"><b>3</b><span>Rows 1–4 follow the brief: overdue and due-today rows get the error colour, due-tomorrow rows get warning. Keyboard: <span class="kbd">/</span> focuses search, arrows move the outlined row, Enter opens it. "Eksport zestawienia" downloads the register as XLSX in the current spreadsheet's column layout.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s2 ═════════════════════════════ -->
+<section class="screen" id="s2">
+  <div class="screen-meta">
+    <h2>2. Kalendarz — widok miesiąca</h2>
+    <p>The same requests placed on their deadline day, so the team can plan the week around peaks, weekends and holidays.</p>
+    <div class="screen-refs"><span class="ref">US-A2</span><span class="ref">D1</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests?view=month&amp;m=2026-11</span></div>
+    <div class="app">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Kalendarz wniosków"></header>
+        <main class="page">
+          <div class="dt">
+            <div class="dt-head">
+              <div class="dt-head-row">
+                <div class="row-3">
+                  <button class="btn btn-outline btn-icon btn-sm" type="button" aria-label="Poprzedni miesiąc"><svg><use href="#ic-chevron-left"/></svg></button>
+                  <h2 class="t-table-title">Listopad 2026</h2>
+                  <button class="btn btn-outline btn-icon btn-sm" type="button" aria-label="Następny miesiąc"><svg><use href="#ic-chevron-right"/></svg></button>
+                  <button class="btn btn-ghost btn-sm" type="button">Dziś</button>
+                </div>
+                <div class="dt-head-actions">
+                  <div class="view-switch" role="tablist" aria-label="Widok">
+                    <button type="button" data-goto="s1"><svg><use href="#ic-list"/></svg> Lista</button>
+                    <span class="div"></span>
+                    <button type="button" aria-selected="true" style="color:var(--foreground)"><svg><use href="#ic-calendar"/></svg> Miesiąc</button>
+                  </div>
+                  <button class="btn btn-primary" type="button" data-goto="s4"><svg><use href="#ic-plus"/></svg> Zarejestruj wniosek</button>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="ts-grid">
+                <div class="ts-dow">pon</div><div class="ts-dow">wt</div><div class="ts-dow">śr</div><div class="ts-dow">czw</div><div class="ts-dow">pt</div><div class="ts-dow">sob</div><div class="ts-dow">niedz</div>
+                <div class="ts-day out"><span class="ts-date">26</span></div><div class="ts-day out"><span class="ts-date">27</span></div><div class="ts-day out"><span class="ts-date">28</span></div><div class="ts-day out"><span class="ts-date">29</span></div><div class="ts-day out"><span class="ts-date">30</span></div><div class="ts-day out weekend"><span class="ts-date">31</span></div>
+                <div class="ts-day holiday"><span class="ts-date">1 · Wszystkich Świętych</span></div>
+                <div class="ts-day"><span class="ts-date">2</span></div><div class="ts-day"><span class="ts-date">3</span></div><div class="ts-day"><span class="ts-date">4</span></div><div class="ts-day"><span class="ts-date">5</span></div><div class="ts-day"><span class="ts-date">6</span></div><div class="ts-day weekend"><span class="ts-date">7</span></div><div class="ts-day weekend"><span class="ts-date">8</span></div>
+                <div class="ts-day"><span class="ts-date">9</span></div><div class="ts-day"><span class="ts-date">10</span></div>
+                <div class="ts-day holiday"><span class="ts-date">11 · Święto Niepodległości</span></div>
+                <div class="ts-day"><span class="ts-date">12</span></div><div class="ts-day"><span class="ts-date">13</span></div><div class="ts-day weekend"><span class="ts-date">14</span></div><div class="ts-day weekend"><span class="ts-date">15</span></div>
+                <div class="ts-day"><span class="ts-date">16</span><span class="cal-item ok"><span>594 wysłano</span><span>✓</span></span></div>
+                <div class="ts-day"><span class="ts-date">17</span></div>
+                <div class="ts-day"><span class="ts-date">18</span></div>
+                <div class="ts-day"><span class="ts-date">19</span><span class="cal-item info" data-goto="s14"><span>598 → kwerenda</span><span>MK</span></span></div>
+                <div class="ts-day"><span class="ts-date">20</span><span class="cal-item err" data-goto="s16"><span>597 po terminie</span><span>TL</span></span></div>
+                <div class="ts-day weekend"><span class="ts-date">21 · sob.</span><span class="t-hint">600 przesunięty ↷</span></div>
+                <div class="ts-day weekend"><span class="ts-date">22</span></div>
+                <div class="ts-day today"><div class="ts-day-head"><span class="ts-date strong">23 · dziś</span></div><span class="cal-item err" data-goto="s9"><span>600 uczniowie</span><span>EN</span></span><span class="cal-item info" data-goto="s15"><span>595 doprecyz.</span><span>TL</span></span></div>
+                <div class="ts-day"><span class="ts-date">24</span><span class="cal-item warn" data-goto="s9"><span>602 fontanny</span><span>MK</span></span></div>
+                <div class="ts-day"><span class="ts-date">25</span></div>
+                <div class="ts-day"><span class="ts-date">26</span><span class="cal-item"><span>604 alkohol</span><span>TL</span></span></div>
+                <div class="ts-day"><span class="ts-date">27</span><span class="cal-item"><span>605 spółki</span><span>MK</span></span></div>
+                <div class="ts-day weekend"><span class="ts-date">28</span></div>
+                <div class="ts-day weekend"><span class="ts-date">29</span></div>
+                <div class="ts-day"><span class="ts-date">30</span><span class="cal-item"><span>608 remont</span><span>EN</span></span><span class="t-hint">termin wewn. 617</span></div>
+                <div class="ts-day out"><span class="ts-date">1</span><span class="cal-item"><span>610 odpady</span><span>TL</span></span></div>
+                <div class="ts-day out"><span class="ts-date">2</span></div>
+                <div class="ts-day out"><span class="ts-date">3</span><span class="cal-item"><span>613 umowa IT</span><span>EN</span></span></div>
+                <div class="ts-day out"><span class="ts-date">4</span><span class="cal-item"><span>615 hałas</span><span>MK</span></span></div>
+                <div class="ts-day out weekend"><span class="ts-date">5</span></div>
+                <div class="ts-day out weekend"><span class="ts-date">6</span></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Shaded days are weekends and public holidays from the holiday calendar in s21. A deadline that lands on one shows a "przesunięty ↷" hint on the original day.</span></div>
+    <div class="note"><b>2</b><span>Internal department deadlines (by default 5 working days before the statutory one) appear as muted hints, so the officer knows when to chase a department.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s3 ═════════════════════════════ -->
+<section class="screen" id="s3">
+  <div class="screen-meta">
+    <h2>3. Stany puste — nowy rok, brak wyników, brak dostępu</h2>
+    <p>The three non-happy list states: an empty year at rollover, a search with no hits, and a staff member outside BKS opening the module.</p>
+    <div class="screen-refs"><span class="ref">US-A1</span><span class="ref">§3 Roles</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests?year=2027</span></div>
+    <div class="app app-narrow">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Kalendarz wniosków"></header>
+        <main class="page">
+          <div class="panel-grid">
+            <div class="state-card"><div class="cap">Rok 2027 — pierwszy dzień</div><div class="inner">
+              <div class="empty">
+                <span class="empty-icon"><svg><use href="#ic-inbox"/></svg></span>
+                <strong>Brak wniosków w 2027 r.</strong>
+                <span class="t-hint" style="max-width:28ch">Numeracja spraw zacznie się od BKS.IV.1431.1.2027. Otwarte sprawy z 2026 r. nadal widać w roku 2026.</span>
+                <button class="btn btn-primary btn-sm" type="button" data-goto="s4"><svg><use href="#ic-plus"/></svg> Zarejestruj wniosek</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-goto="s1">Przejdź do 2026 (11 otwartych)</button>
+              </div>
+            </div></div>
+            <div class="state-card"><div class="cap">Wyszukiwanie „basen Astoria” + filtr „Tylko moje”</div><div class="inner">
+              <div class="empty">
+                <span class="empty-icon"><svg><use href="#ic-search"/></svg></span>
+                <strong>Brak wniosków spełniających kryteria</strong>
+                <span class="t-hint" style="max-width:28ch">2 pasujące wnioski prowadzą inne osoby. Szukasz odpowiedzi z poprzednich lat? Użyj archiwum.</span>
+                <div class="row"><button class="btn btn-outline btn-sm" type="button">Wyczyść filtry</button><button class="btn btn-ghost btn-sm" type="button" data-goto="s18"><svg><use href="#ic-archive"/></svg> Szukaj w archiwum</button></div>
+              </div>
+            </div></div>
+            <div class="state-card"><div class="cap">Pracownik wydziału bez uprawnień</div><div class="inner">
+              <div class="empty">
+                <span class="empty-icon"><svg><use href="#ic-lock"/></svg></span>
+                <strong>Brak dostępu do rejestru wniosków UDIP</strong>
+                <span class="t-hint" style="max-width:30ch">Moduł jest dostępny wyłącznie dla Biura Komunikacji Społecznej (AIP). Wydziały otrzymują zapytania od AIP poza systemem.</span>
+                <span class="t-hint">Wymagane uprawnienie: <code class="t-mono">udip.requests.view</code></span>
+              </div>
+            </div></div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>The year selector defaults to the current year. Cases still open from the previous year are listed under their registration year, and a banner in the new year shows how many remain (not drawn here).</span></div>
+    <div class="note"><b>2</b><span>The no-access state never shows case counts or names. It only names the missing feature, which matches the declarative <code>requireFeatures</code> guards.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s4 ═════════════════════════════ -->
+<section class="screen" id="s4">
+  <div class="screen-meta">
+    <h2>4. Rejestracja 1/3 — wgranie dokumentu i OCR</h2>
+    <p>The officer picks the channel the request came through and drops in the scan. OCR turns the paper letter into editable text, shown next to the original.</p>
+    <div class="screen-refs"><span class="ref">§2.2</span><span class="ref">US-B1</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/create?step=source</span></div>
+    <div class="app app-tall">
+      <aside class="sidebar" data-active="s4"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Zarejestruj wniosek"></header>
+        <main class="page">
+          <div class="form-head">
+            <div class="row-3"><a class="back-link" href="#s1" data-goto="s1"><svg><use href="#ic-chevron-left"/></svg> Kalendarz</a><span class="title">Nowy wniosek</span></div>
+            <div class="stepper">
+              <span class="step current"><span class="n">1</span>Dokument</span><span class="step-sep"></span>
+              <span class="step"><span class="n">2</span>Dane i termin</span><span class="step-sep"></span>
+              <span class="step"><span class="n">3</span>Podobne wnioski</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="title">Kanał wpływu <span class="req">*</span></div>
+            <div class="channel-grid">
+              <button class="channel" type="button" aria-pressed="false"><svg><use href="#ic-mail"/></svg>E-mail</button>
+              <button class="channel" type="button" aria-pressed="false"><svg><use href="#ic-inbox"/></svg>ePUAP</button>
+              <button class="channel" type="button" aria-pressed="true"><svg><use href="#ic-file"/></svg>Poczta / papier</button>
+              <button class="channel" type="button" aria-pressed="false"><svg><use href="#ic-users"/></svg>Osobiście</button>
+              <button class="channel" type="button" aria-pressed="false"><svg><use href="#ic-phone"/></svg>Telefon</button>
+            </div>
+            <span class="t-hint">System nie odczytuje skrzynek pocztowych ani ePUAP — wgrywasz to, co wpłynęło. Wniosek telefoniczny lub ustny możesz wpisać ręcznie.</span>
+          </div>
+          <div class="split split-2">
+            <div class="form-col">
+              <div class="form-group">
+                <div class="between"><div class="title">Oryginał</div><span class="badge badge-success"><svg><use href="#ic-check"/></svg> OCR zakończony · 97% pewności</span></div>
+                <div class="file-row"><svg><use href="#ic-scan"/></svg><div class="grow"><div class="strong ellipsis">skan_wniosek_2026-11-23_0812.pdf</div><div class="t-hint">1 strona · 412 KB · zeskanowano w punkcie kancelaryjnym</div></div><button class="btn btn-ghost btn-icon btn-sm" type="button" aria-label="Usuń"><svg><use href="#ic-trash"/></svg></button></div>
+                <div class="scan">
+                  <p style="text-align:right">Bydgoszcz, 19 listopada 2026 r.</p>
+                  <p>Piotr Zieliński<br/>ul. Przykładowa 14/3, 85-001 Bydgoszcz<br/>tel. 600 100 200</p>
+                  <p style="text-align:right">Prezydent Miasta Bydgoszczy</p>
+                  <p style="text-align:center"><strong>Wniosek o udostępnienie informacji publicznej</strong></p>
+                  <p>Na podstawie art. 2 ust. 1 ustawy z dnia 6 września 2001 r. o dostępie do informacji publicznej wnoszę o udostępnienie:</p>
+                  <p>1. Ile drzew usunięto w 2026 r. na nieruchomościach Miasta Bydgoszczy, z podziałem na dzielnice?<br/>2. Ile nasadzeń zastępczych wykonano lub zaplanowano?<br/>3. Jaki był łączny koszt usunięcia drzew i nasadzeń w 2026 r.?<br/>4. Proszę o kopię umowy z wykonawcą pielęgnacji zieleni miejskiej na 2026 r.</p>
+                  <p>Odpowiedź proszę przesłać na adres: p.zielinski@example.com</p>
+                  <p style="text-align:right"><em>/podpis/</em></p>
+                </div>
+                <div class="dropzone" style="padding:1rem"><svg><use href="#ic-upload"/></svg><span>Dodaj kolejną stronę lub załącznik — PDF, DOCX, JPG, PNG, EML, MSG</span></div>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <div class="between"><div class="title">Rozpoznany tekst <span class="ai-tag"><svg><use href="#ic-sparkles"/></svg>OCR lokalny</span></div><button class="btn btn-ghost btn-sm" type="button"><svg><use href="#ic-pencil"/></svg> Edytuj</button></div>
+                <div class="ocr-text">
+                  <p>Bydgoszcz, 19 listopada 2026 r.</p>
+                  <p>Piotr Zieliński, ul. Przykładowa 14/3, 85-001 Bydgoszcz, tel. <span class="ocr-low" title="Niska pewność rozpoznania — sprawdź">600 100 200</span></p>
+                  <p><strong>Wniosek o udostępnienie informacji publicznej</strong></p>
+                  <p>Na podstawie art. 2 ust. 1 ustawy z dnia 6 września 2001 r. o dostępie do informacji publicznej wnoszę o udostępnienie:</p>
+                  <p><span class="hl-point">1. Ile drzew usunięto w 2026 r. na nieruchomościach Miasta Bydgoszczy, z podziałem na dzielnice?</span></p>
+                  <p><span class="hl-point">2. Ile nasadzeń zastępczych wykonano lub zaplanowano?</span></p>
+                  <p><span class="hl-point">3. Jaki był łączny koszt usunięcia drzew i nasadzeń w 2026 r.?</span></p>
+                  <p><span class="hl-point">4. Proszę o kopię umowy z wykonawcą pielęgnacji zieleni miejskiej na 2026 r.</span></p>
+                  <p>Odpowiedź proszę przesłać na adres: p.zielinski@example.com</p>
+                </div>
+                <div class="alert alert-info"><svg><use href="#ic-info"/></svg><div><div class="alert-title">Wykryto 4 pytania i dane wnioskodawcy</div>W następnym kroku staną się pytaniami wniosku i podpowiedziami pól. Tekst możesz jeszcze poprawić.</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-foot">
+            <span class="t-hint">Oryginał trafia do akt sprawy bez zmian. Treść przetwarza lokalny model, bez połączenia z Internetem.</span>
+            <div class="actions">
+              <button class="btn btn-outline" type="button" data-goto="s1">Anuluj</button>
+              <button class="btn btn-primary" type="button" data-goto="s5">Dalej: dane i termin <svg><use href="#ic-arrow-right"/></svg></button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>OCR runs as soon as the file is dropped in. The wavy underline marks low-confidence words (here the phone number). Clicking one jumps to that spot on the original.</span></div>
+    <div class="note"><b>2</b><span>For e-mail the officer uploads the exported .eml or .msg, and the system reads the sender, date and body. For PDF and DOCX the text layer is extracted without OCR. For phone requests a text area replaces the drop zone.</span></div>
+    <div class="note"><b>3</b><span>If OCR fails (unreadable scan), see the error state in s16.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s5 ═════════════════════════════ -->
+<section class="screen" id="s5">
+  <div class="screen-meta">
+    <h2>5. Rejestracja 2/3 — dane wniosku i termin</h2>
+    <p>Fields suggested from the document are marked violet until the officer confirms them. The deadline is calculated live and shows its working.</p>
+    <div class="screen-refs"><span class="ref">US-B2</span><span class="ref">US-B3</span><span class="ref">D1</span><span class="ref">D5</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/create?step=details</span></div>
+    <div class="app app-taller">
+      <aside class="sidebar" data-active="s4"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Zarejestruj wniosek"></header>
+        <main class="page">
+          <div class="form-head">
+            <div class="row-3"><a class="back-link" href="#s4" data-goto="s4"><svg><use href="#ic-chevron-left"/></svg> Dokument</a><span class="title">Nowy wniosek</span></div>
+            <div class="stepper">
+              <span class="step done"><span class="n"><svg><use href="#ic-check"/></svg></span>Dokument</span><span class="step-sep"></span>
+              <span class="step current"><span class="n">2</span>Dane i termin</span><span class="step-sep"></span>
+              <span class="step"><span class="n">3</span>Podobne wnioski</span>
+            </div>
+          </div>
+          <div class="form-layout">
+            <div class="form-col">
+              <div class="form-group">
+                <div class="title">Wnioskodawca</div>
+                <div class="form-grid form-grid-2">
+                  <div class="field field-suggested"><div class="label-row"><span>Imię i nazwisko / nazwa <span class="req">*</span></span><span class="ai-tag"><svg><use href="#ic-sparkles"/></svg>sugestia</span></div><input class="input" value="Piotr Zieliński" /></div>
+                  <div class="field"><label>Typ wnioskodawcy</label><select class="select"><option>Osoba fizyczna</option><option>Organizacja</option><option>Media</option><option>Radny / poseł</option></select></div>
+                  <div class="field field-suggested"><div class="label-row"><span>Adres do korespondencji</span><span class="ai-tag"><svg><use href="#ic-sparkles"/></svg>sugestia</span></div><input class="input" value="ul. Przykładowa 14/3, 85-001 Bydgoszcz" /></div>
+                  <div class="field field-suggested"><div class="label-row"><span>Sposób i forma udostępnienia <span class="req">*</span></span><span class="ai-tag"><svg><use href="#ic-sparkles"/></svg>z treści wniosku</span></div><select class="select"><option>E-mail: p.zielinski@example.com</option><option>Poczta tradycyjna</option><option>ePUAP</option><option>Wgląd w siedzibie</option></select></div>
+                </div>
+                <div class="alert alert-warning"><svg><use href="#ic-warn"/></svg><div><div class="alert-title">Ten wnioskodawca ma otwartą sprawę</div>BKS.IV.1431.588.2026 „Nasadzenia przy ul. Fordońskiej” (Odpowiedź wysłana 12.11). Temat pokrewny, inny zakres. <a href="#s6" data-goto="s6">Porównaj</a> · <span class="muted">Powiąż sprawy</span></div></div>
+                <span class="t-hint"><svg style="width:0.75rem;height:0.75rem;vertical-align:-0.1rem"><use href="#ic-shield"/></svg> Dane wnioskodawcy widzi tylko BKS — nie trafiają do archiwum ani do indeksu podobieństwa.</span>
+              </div>
+              <div class="form-group">
+                <div class="between"><div class="title">Przedmiot wniosku</div><span class="ai-tag"><svg><use href="#ic-sparkles"/></svg>podział na pytania</span></div>
+                <div class="field field-suggested"><label>Krótki opis (do kalendarza) <span class="req">*</span></label><input class="input" value="Wycinka drzew i nasadzenia zastępcze na terenach miejskich w 2026 r." /></div>
+                <ol class="points">
+                  <li><span class="pnum">1</span><span class="grow">Liczba drzew usuniętych w 2026 r. na nieruchomościach Miasta, z podziałem na dzielnice.</span><button class="btn btn-ghost btn-icon btn-sm" type="button" aria-label="Edytuj"><svg><use href="#ic-pencil"/></svg></button></li>
+                  <li><span class="pnum">2</span><span class="grow">Liczba nasadzeń zastępczych wykonanych lub zaplanowanych.</span><button class="btn btn-ghost btn-icon btn-sm" type="button" aria-label="Edytuj"><svg><use href="#ic-pencil"/></svg></button></li>
+                  <li><span class="pnum">3</span><span class="grow">Łączny koszt usunięcia drzew i nasadzeń zastępczych w 2026 r.</span><button class="btn btn-ghost btn-icon btn-sm" type="button" aria-label="Edytuj"><svg><use href="#ic-pencil"/></svg></button></li>
+                  <li><span class="pnum">4</span><span class="grow">Kopia umowy z wykonawcą pielęgnacji zieleni miejskiej obowiązującej w 2026 r.</span><button class="btn btn-ghost btn-icon btn-sm" type="button" aria-label="Edytuj"><svg><use href="#ic-pencil"/></svg></button></li>
+                </ol>
+                <button class="btn btn-ghost btn-sm" type="button" style="align-self:flex-start"><svg><use href="#ic-plus"/></svg> Dodaj pytanie</button>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <div class="title">Rejestracja</div>
+                <div class="field"><div class="label-row"><span>Numer sprawy <span class="req">*</span></span><span class="ai-tag"><svg><use href="#ic-sparkles"/></svg>kolejny wolny</span></div><input class="input t-mono" value="BKS.IV.1431.617.2026" /><span class="t-hint">Zmień, jeśli w rejestrze kancelaryjnym (SIDAS) nadano inny numer.</span></div>
+                <div class="field"><label>Data wpływu <span class="req">*</span></label><input class="input num" value="23.11.2026" /><span class="t-hint">Data pisma: 19.11.2026 — termin liczy się od daty wpływu.</span></div>
+                <div class="field"><label>Prowadzący</label><select class="select"><option>Magdalena Kos (MK)</option><option>Tomasz Lis (TL)</option><option>Ewa Nowicka (EN)</option></select></div>
+              </div>
+              <div class="deadline-box">
+                <span class="t-overline">Termin ustawowy</span>
+                <span class="big">07.12.2026</span>
+                <span class="t-hint">poniedziałek · za 14 dni</span>
+                <span class="calc">23.11 + 14 dni kalendarzowych = 07.12 (pon.)<br/>art. 13 ust. 1 UDIP · bez przesunięcia</span>
+                <hr class="separator" />
+                <span class="t-hint">Maks. po przedłużeniu (art. 13 ust. 2): <strong class="num">25.01.2027</strong> (23.01 to sobota ↷)</span>
+                <span class="t-hint">Sugerowany termin dla wydziałów: <strong class="num">30.11.2026</strong></span>
+              </div>
+            </div>
+          </div>
+          <div class="form-foot">
+            <span class="t-hint">Potwierdź lub popraw każdą <span class="ai-tag">sugestię</span> — zapis utrwala, kto zaakceptował wartości.</span>
+            <div class="actions">
+              <button class="btn btn-outline" type="button" data-goto="s4">Wstecz</button>
+              <button class="btn btn-outline" type="button"><svg><use href="#ic-save"/></svg> Zapisz szkic</button>
+              <button class="btn btn-primary" type="button" data-goto="s6">Zarejestruj i sprawdź podobne <svg><use href="#ic-arrow-right"/></svg></button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Changing "Data wpływu" recalculates the deadline immediately. The working is always shown, and when a shift applies it names the reason (e.g. "21.11 to sobota → 23.11").</span></div>
+    <div class="note"><b>2</b><span>The case number is checked live for duplicates (conflict state in s16). The suggested number is the year's highest + 1.</span></div>
+    <div class="note"><b>3</b><span>The split into points drives everything after this step: routing (s7), department replies (s10) and the "Ad 1… Ad 4" structure of the draft (s11).</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s6 ═════════════════════════════ -->
+<section class="screen" id="s6">
+  <div class="screen-meta">
+    <h2>6. Rejestracja 3/3 — podobne wnioski z archiwum</h2>
+    <p>Before anyone asks a department, the officer sees which past requests covered the same questions and decides what to reuse.</p>
+    <div class="screen-refs"><span class="ref">§4 D4</span><span class="ref">US-C1</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026/similar</span></div>
+    <div class="app app-taller">
+      <aside class="sidebar" data-active="s4"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|BKS.IV.1431.617.2026|Podobne wnioski"></header>
+        <main class="page">
+          <div class="form-head">
+            <div class="row-3"><span class="title">BKS.IV.1431.617.2026 — Wycinka drzew i nasadzenia 2026</span><span class="badge badge-neutral"><span class="dot"></span>Nowy</span></div>
+            <div class="stepper">
+              <span class="step done"><span class="n"><svg><use href="#ic-check"/></svg></span>Dokument</span><span class="step-sep"></span>
+              <span class="step done"><span class="n"><svg><use href="#ic-check"/></svg></span>Dane i termin</span><span class="step-sep"></span>
+              <span class="step current"><span class="n">3</span>Podobne wnioski</span>
+            </div>
+          </div>
+          <div class="ai-box row-3"><svg style="width:1rem;height:1rem;flex:none"><use href="#ic-sparkles"/></svg><span class="grow">Przeszukano <strong>1 284</strong> wnioski archiwalne z 24 miesięcy — <strong>3 podobne</strong>. Na pytania <span class="pnum pnum-sm">1</span><span class="pnum pnum-sm">2</span><span class="pnum pnum-sm">4</span> już odpowiadano; pytanie <span class="pnum pnum-sm">3</span> (koszty 2026) nie ma odpowiednika.</span><span class="chip">Okres: 24 mies. <svg><use href="#ic-chevron-down"/></svg></span></div>
+          <div class="split split-side">
+            <div class="stack-3">
+              <div class="match selected">
+                <div class="between"><div class="row-3"><span class="t-mono strong">BKS.IV.1431.412.2025</span><span class="t-hint">14.07.2025</span></div><span class="sim"><span class="track"><span style="width:82%"></span></span>82%</span></div>
+                <div class="strong">Wycinka drzew na terenach miejskich w 2024 r. i nasadzenia zastępcze</div>
+                <div class="why">Pokrywa: <span class="pnum pnum-sm">1</span><span class="pnum pnum-sm">2</span> · Odpowiedzieli: <span class="chip">Wydz. Ochrony Środowiska</span> · Załącznik: zestawienie XLSX · Odpowiedź w 9 dni</div>
+                <div class="compare">
+                  <div><div class="t-overline" style="margin-bottom:0.375rem">Nowy wniosek (617/2026)</div><div class="quote"><mark>Ile drzew usunięto</mark> w <strong>2026</strong> r. <mark>na nieruchomościach Miasta</mark> Bydgoszczy, <mark>z podziałem na dzielnice</mark>? Ile <mark>nasadzeń zastępczych</mark> wykonano lub zaplanowano?</div></div>
+                  <div><div class="t-overline" style="margin-bottom:0.375rem">Odpowiedź z 2025 r. (fragment)</div><div class="quote">„W 2024 r. na nieruchomościach Miasta usunięto 287 drzew; zestawienie z podziałem na dzielnice stanowi załącznik nr 1. Wykonano 512 nasadzeń zastępczych…”</div></div>
+                </div>
+                <div class="alert alert-warning"><svg><use href="#ic-warn"/></svg><div>Dawna odpowiedź dotyczy <strong>2024 r.</strong>, nowy wniosek — 2026 r. Dane trzeba ponownie pozyskać z wydziału; można wykorzystać strukturę pisma i wzór załącznika.</div></div>
+              </div>
+              <div class="match">
+                <div class="between"><div class="row-3"><span class="t-mono strong">BKS.IV.1431.233.2026</span><span class="t-hint">02.05.2026</span></div><span class="sim mid"><span class="track"><span style="width:71%"></span></span>71%</span></div>
+                <div class="strong">Umowa na pielęgnację zieleni miejskiej — kopia i aneksy</div>
+                <div class="why">Pokrywa: <span class="pnum pnum-sm">4</span> · Odpowiedzieli: <span class="chip">Wydz. Gospodarki Komunalnej</span> · Udostępniono umowę 18/WGK/2026 (po anonimizacji) · <span class="badge badge-info"><svg><use href="#ic-link"/></svg>jest w BIP — Rejestr umów</span></div>
+              </div>
+              <div class="match">
+                <div class="between"><div class="row-3"><span class="t-mono strong">BKS.IV.1431.087.2025</span><span class="t-hint">11.02.2025</span></div><span class="sim low"><span class="track"><span style="width:54%"></span></span>54%</span></div>
+                <div class="strong">Nasadzenia kompensacyjne przy przebudowie ul. Kujawskiej</div>
+                <div class="why">Pokrywa częściowo: <span class="pnum pnum-sm">2</span> · Inny zakres (jedna inwestycja)</div>
+              </div>
+            </div>
+            <div class="stack-3">
+              <div class="card card-pad stack-3">
+                <div class="t-card-title">Co zrobić z dopasowaniami?</div>
+                <label class="row" style="align-items:flex-start"><input type="radio" name="reuse" checked /> <span><strong>Kieruj do wydziałów, użyj struktury z 412/2025</strong><br/><span class="t-hint">Zalecane: dane są nieaktualne, ale szkielet pisma i wzór zestawienia można ponownie użyć.</span></span></label>
+                <label class="row" style="align-items:flex-start"><input type="radio" name="reuse" /> <span><strong>Zacznij projekt od dawnej odpowiedzi</strong><br/><span class="t-hint">Bez kierowania do wydziałów — tylko gdy informacja się nie zmieniła.</span></span></label>
+                <label class="row" style="align-items:flex-start"><input type="radio" name="reuse" /> <span><strong>Wskaż publikację w BIP</strong><br/><span class="t-hint">Dla pytania 4 umowa jest w Rejestrze umów BIP (§ 8 ust. 1 zarządzenia).</span></span></label>
+                <hr class="separator" />
+                <button class="btn btn-primary" type="button" data-goto="s7">Dalej: propozycja ścieżki <svg><use href="#ic-arrow-right"/></svg></button>
+                <button class="btn btn-ghost btn-sm" type="button" data-goto="s16">Brak podobnych? Zobacz stan pusty</button>
+              </div>
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Dlaczego te wyniki?</div>
+                <span class="t-hint">Wyszukiwanie semantyczne w zanonimizowanym archiwum (treść wniosku i odpowiedzi), z filtrem wydziału i okresu. Dane wnioskodawców nie są porównywane.</span>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Matching works per point, not per whole request, so a mixed request can reuse one answer and route the rest. Highlighted phrases show why a match was found.</span></div>
+    <div class="note"><b>2</b><span>The chosen option is logged on the case ("Dopasowanie 412/2025 — użyto struktury"). Matches never skip routing on their own (D4).</span></div>
+    <div class="note"><b>3</b><span>With no matches the panel says "Brak podobnych wniosków w archiwum" and goes straight to routing. That state is drawn in s16.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s7 ═════════════════════════════ -->
+<section class="screen" id="s7">
+  <div class="screen-meta">
+    <h2>7. Propozycja ścieżki — które wydziały i o co zapytać</h2>
+    <p>The assistant maps every point of the request to the department that holds the information and explains why, citing the org structure, past answers and law. The officer edits the proposal and accepts it.</p>
+    <div class="screen-refs"><span class="ref">§1 Zarządzenie §10</span><span class="ref">US-D1</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026/routing</span></div>
+    <div class="app app-taller">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|BKS.IV.1431.617.2026|Ścieżka"></header>
+        <main class="page">
+          <div class="page-head">
+            <div><h1 class="t-page-title">Propozycja ścieżki pozyskania odpowiedzi</h1><p>BKS.IV.1431.617.2026 · termin ustawowy 07.12.2026 · 4 pytania</p></div>
+            <div class="page-actions"><button class="btn btn-outline" type="button"><svg><use href="#ic-refresh"/></svg> Wygeneruj ponownie</button></div>
+          </div>
+          <div class="split split-side">
+            <div class="stack-3">
+              <div class="route">
+                <div class="route-head">
+                  <button class="check" type="button" aria-checked="true" aria-label="Uwzględnij"><svg><use href="#ic-check"/></svg></button>
+                  <div class="grow"><div class="between"><strong>Wydział Ochrony Środowiska</strong><span class="row"><span class="pnum pnum-sm">1</span><span class="pnum pnum-sm">2</span><span class="conf">pewność 92%</span></span></div></div>
+                </div>
+                <div class="route-body">
+                  <div class="field"><label class="t-hint">Zakres informacji do przygotowania</label><textarea class="textarea" rows="3">1) liczba drzew usuniętych w 2026 r. (do dnia przygotowania odpowiedzi) na nieruchomościach Miasta Bydgoszczy, z podziałem na dzielnice; 2) liczba nasadzeń zastępczych wykonanych oraz zaplanowanych w związku z tymi wycinkami (z terminem realizacji).</textarea></div>
+                  <div class="why">Dlaczego: <span class="src"><svg><use href="#ic-building"/></svg>Regulamin org. — zezwolenia na usunięcie drzew</span><span class="src"><svg><use href="#ic-archive"/></svg>412/2025 — ten sam zakres</span></div>
+                </div>
+              </div>
+              <div class="route">
+                <div class="route-head">
+                  <button class="check" type="button" aria-checked="true" aria-label="Uwzględnij"><svg><use href="#ic-check"/></svg></button>
+                  <div class="grow"><div class="between"><strong>Wydział Gospodarki Komunalnej</strong><span class="row"><span class="pnum pnum-sm">3</span><span class="pnum pnum-sm">4</span><span class="conf">pewność 84%</span></span></div></div>
+                </div>
+                <div class="route-body">
+                  <div class="field"><label class="t-hint">Zakres informacji do przygotowania</label><textarea class="textarea" rows="3">3) łączny koszt usunięcia drzew i nasadzeń zastępczych w 2026 r. (brutto, w podziale na usunięcia i nasadzenia); 4) kopia umowy z wykonawcą pielęgnacji zieleni miejskiej obowiązującej w 2026 r. wraz z aneksami — po anonimizacji danych osobowych.</textarea></div>
+                  <div class="why">Dlaczego: <span class="src"><svg><use href="#ic-archive"/></svg>233/2026 — umowa 18/WGK/2026</span><span class="src"><svg><use href="#ic-building"/></svg>Regulamin org. — utrzymanie zieleni</span></div>
+                </div>
+              </div>
+              <div class="route off">
+                <div class="route-head">
+                  <button class="check" type="button" aria-checked="false" aria-label="Uwzględnij"><svg><use href="#ic-check"/></svg></button>
+                  <div class="grow"><div class="between"><strong>Wydział Finansów</strong><span class="row"><span class="pnum pnum-sm">3</span><span class="conf">pewność 41% · opcjonalnie</span></span></div><span class="t-hint">Potwierdzenie kosztów z ewidencji księgowej — zwykle niepotrzebne, gdy WGK podaje kwoty z umowy.</span></div>
+                </div>
+              </div>
+              <button class="btn btn-outline btn-sm" type="button" style="align-self:flex-start"><svg><use href="#ic-plus"/></svg> Dodaj wydział</button>
+            </div>
+            <div class="stack-3">
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Uwagi prawne asystenta</div>
+                <div class="alert alert-warning"><svg><use href="#ic-warn"/></svg><div><div class="alert-title">Pasy drogowe — inny podmiot</div>Drzewa w pasach dróg publicznych są w zarządzie <strong>ZDMiKP</strong> (miejska jednostka organizacyjna, odrębny podmiot zobowiązany). Rozważ poinformowanie wnioskodawcy w odpowiedzi.</div></div>
+                <div class="alert alert-info"><svg><use href="#ic-link"/></svg><div><div class="alert-title">Pyt. 4 — publikacja w BIP</div>Umowa 18/WGK/2026 jest w Rejestrze umów BIP. Możesz wskazać adres zamiast kopii (§ 8 ust. 1 zarządzenia).</div></div>
+                <div class="alert alert-info"><svg><use href="#ic-eye-off"/></svg><div><div class="alert-title">Dane osobowe w umowie</div>Poproś WGK o anonimizację podpisów i danych kontaktowych pracowników wykonawcy (§ 11 ust. 8).</div></div>
+              </div>
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Termin dla wydziałów</div>
+                <input class="input num" value="30.11.2026" />
+                <span class="t-hint">5 dni roboczych przed terminem ustawowym (07.12). Ustawienie domyślne: s21.</span>
+              </div>
+              <button class="btn btn-primary" type="button" data-goto="s8">Akceptuj i przygotuj notatki (2) <svg><use href="#ic-arrow-right"/></svg></button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Every proposal cites its sources. Clicking a chip opens the regulation excerpt or the past case. Confidence below 50% leaves the department unticked and marked "opcjonalnie".</span></div>
+    <div class="note"><b>2</b><span>Legal flags come from the knowledge base (UDIP, KPA, Zarządzenie 535/2024): already in BIP, separate obligated entity, protected data, processed information.</span></div>
+    <div class="note"><b>3</b><span>Accepting writes the routing to the case. Nothing is sent: the next step only produces text to copy.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s8 ═════════════════════════════ -->
+<section class="screen" id="s8">
+  <div class="screen-meta">
+    <h2>8. Notatka do wydziału — kopiuj / pobierz, potem oznacz jako wysłane</h2>
+    <p>The officer copies a ready internal note into their own mailbox (or downloads a DOCX), sends it outside the system, and records that it went out.</p>
+    <div class="screen-refs"><span class="ref">§2.3</span><span class="ref">US-D2</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026/routing#notes</span></div>
+    <div class="app app-taller modal-scrim">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|BKS.IV.1431.617.2026|Ścieżka"></header>
+        <main class="page"><div class="page-head"><div><h1 class="t-page-title">Propozycja ścieżki pozyskania odpowiedzi</h1><p>BKS.IV.1431.617.2026</p></div></div></main>
+      </div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="s8-title" style="width:46rem">
+        <div class="modal-head">
+          <h3 id="s8-title" class="t-section">Notatki do wydziałów (2)</h3>
+          <p class="t-hint" style="margin:0.25rem 0 0">System nie wysyła wiadomości. Skopiuj treść do swojej poczty lub pobierz pismo, a po wysłaniu oznacz je poniżej.</p>
+        </div>
+        <div class="modal-body">
+          <div class="tabs"><button type="button" aria-selected="true">Wydz. Ochrony Środowiska</button><button type="button" aria-selected="false">Wydz. Gospodarki Komunalnej</button></div>
+          <div class="field"><label>Temat</label><input class="input" value="UDIP BKS.IV.1431.617.2026 — prośba o informację do 30.11.2026" /></div>
+          <div class="field"><label>Treść</label><textarea class="textarea" rows="9">Szanowni Państwo,
+
+w związku z wnioskiem o udostępnienie informacji publicznej (BKS.IV.1431.617.2026, data wpływu 23.11.2026) uprzejmie proszę o przygotowanie, zgodnie z § 11 zarządzenia nr 535/2024, projektu odpowiedzi w zakresie:
+1) liczby drzew usuniętych w 2026 r. na nieruchomościach Miasta Bydgoszczy, z podziałem na dzielnice;
+2) liczby nasadzeń zastępczych wykonanych oraz zaplanowanych (z terminem realizacji).
+
+Proszę o przesłanie materiału na adres bip@um.bydgoszcz.pl w terminie do 30.11.2026 r., po dokonaniu niezbędnej anonimizacji. W razie braku możliwości dotrzymania terminu proszę o informację o przyczynie (§ 11 ust. 5).
+
+Treść wniosku w załączeniu.</textarea></div>
+          <div class="row wrap">
+            <button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-copy"/></svg> Kopiuj treść</button>
+            <button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-download"/></svg> Pobierz .docx</button>
+            <button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-download"/></svg> Pobierz wniosek (bez danych wnioskodawcy)</button>
+          </div>
+          <div class="form-group">
+            <div class="title">Potwierdzenie wysłania</div>
+            <div class="form-grid form-grid-2">
+              <div class="field"><label>Wysłano do WOŚ dnia</label><input class="input num" value="23.11.2026" /></div>
+              <div class="field"><label>Wysłano do WGK dnia</label><input class="input num" value="23.11.2026" /></div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span class="t-hint"><span class="kbd">Esc</span> anuluj · <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> zapisz</span>
+          <div class="row"><button class="btn btn-outline" type="button" data-goto="s7">Anuluj</button><button class="btn btn-primary" type="button" data-goto="s9"><svg><use href="#ic-check"/></svg> Oznacz jako wysłane (2)</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>"Pobierz wniosek (bez danych wnioskodawcy)" gives departments the request text with the requester's name, address and contact removed. Departments only need the questions.</span></div>
+    <div class="note"><b>2</b><span>Saving sets the case to <em>Wysłano do wydziałów</em> and starts the per-department tracker in s9. Each department can be marked separately, e.g. if one note goes out the next day.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s9 ═════════════════════════════ -->
+<section class="screen" id="s9">
+  <div class="screen-meta">
+    <h2>9. Sprawa — przegląd i odpowiedzi wydziałów (stan na 30.11.2026)</h2>
+    <p>One page shows the whole case: deadline countdown, status, which departments have replied, the documents, and a history of every human and assistant action.</p>
+    <div class="screen-refs"><span class="ref">US-E1</span><span class="ref">D9</span><span class="ref">§5 cross-cutting</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026</span></div>
+    <div class="app app-taller">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Kalendarz wniosków|BKS.IV.1431.617.2026"></header>
+        <main class="page">
+          <div class="form-head">
+            <div class="row-3"><a class="back-link" href="#s1" data-goto="s1"><svg><use href="#ic-chevron-left"/></svg> Kalendarz</a><span class="title">BKS.IV.1431.617.2026 — Wycinka drzew i nasadzenia zastępcze 2026</span><span class="badge badge-info"><span class="dot"></span>Wysłano do wydziałów · 1/2</span></div>
+            <div class="row wrap">
+              <button class="btn btn-outline btn-sm" type="button" data-goto="s15"><svg><use href="#ic-mail"/></svg> Wezwij do doprecyzowania</button>
+              <button class="btn btn-outline btn-sm" type="button" data-goto="s14"><svg><use href="#ic-clock"/></svg> Przedłuż termin</button>
+              <button class="btn btn-primary btn-sm" type="button" data-goto="s11"><svg><use href="#ic-sparkles"/></svg> Przygotuj projekt odpowiedzi</button>
+            </div>
+          </div>
+          <div class="status-track">
+            <div class="seg done"><span class="bar"></span>Zarejestrowany 23.11</div>
+            <div class="seg done"><span class="bar"></span>Wysłano do wydziałów 23.11</div>
+            <div class="seg current"><span class="bar"></span>Zbieranie odpowiedzi 1/2</div>
+            <div class="seg"><span class="bar"></span>Odpowiedź w przygotowaniu</div>
+            <div class="seg"><span class="bar"></span>Odpowiedź przygotowana</div>
+            <div class="seg"><span class="bar"></span>Odpowiedź wysłana</div>
+          </div>
+          <div class="form-layout">
+            <div class="form-col">
+              <div class="dt">
+                <div class="dt-head"><div class="dt-head-row"><h2 class="t-table-title">Odpowiedzi wydziałów</h2><button class="btn btn-outline btn-sm" type="button" data-goto="s10"><svg><use href="#ic-upload"/></svg> Wgraj odpowiedź</button></div></div>
+                <table class="table">
+                  <thead><tr><th>Wydział</th><th>Pytania</th><th>Wysłano</th><th>Termin wewn.</th><th>Status</th><th>Pliki</th></tr></thead>
+                  <tbody>
+                    <tr><td>Wydz. Ochrony Środowiska</td><td><span class="pnum pnum-sm">1</span> <span class="pnum pnum-sm">2</span></td><td class="num">23.11</td><td class="num">30.11</td><td><span class="badge badge-success"><svg><use href="#ic-check"/></svg>Otrzymano 27.11</span></td><td><span class="src"><svg><use href="#ic-file"/></svg>WOŚ.6131.1204.2026.pdf</span><br/><span class="src"><svg><use href="#ic-file"/></svg>zestawienie_dzielnice.xlsx</span></td></tr>
+                    <tr class="row-today"><td>Wydz. Gospodarki Komunalnej</td><td><span class="pnum pnum-sm">3</span> <span class="pnum pnum-sm">4</span></td><td class="num">23.11</td><td class="num strong">30.11 · dziś</td><td><span class="badge badge-warning"><span class="dot"></span>Oczekuje</span></td><td><button class="btn btn-ghost btn-xs" type="button" data-goto="s10"><svg><use href="#ic-upload"/></svg> Wgraj</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="form-group">
+                <div class="title">Treść wniosku</div>
+                <ol class="points">
+                  <li><span class="pnum">1</span><span class="grow">Liczba drzew usuniętych w 2026 r. na nieruchomościach Miasta, z podziałem na dzielnice.</span><span class="badge badge-success">WOŚ ✓</span></li>
+                  <li><span class="pnum">2</span><span class="grow">Liczba nasadzeń zastępczych wykonanych lub zaplanowanych.</span><span class="badge badge-success">WOŚ ✓</span></li>
+                  <li><span class="pnum">3</span><span class="grow">Łączny koszt usunięcia drzew i nasadzeń zastępczych w 2026 r.</span><span class="badge badge-warning">WGK …</span></li>
+                  <li><span class="pnum">4</span><span class="grow">Kopia umowy z wykonawcą pielęgnacji zieleni miejskiej (2026).</span><span class="badge badge-warning">WGK …</span></li>
+                </ol>
+                <div class="row"><span class="src"><svg><use href="#ic-scan"/></svg>skan_wniosek_2026-11-23_0812.pdf</span><span class="src"><svg><use href="#ic-file"/></svg>tekst OCR</span></div>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="countdown"><svg><use href="#ic-clock"/></svg><div><div class="big">7 dni</div><div>do terminu 07.12.2026 (pon.)</div></div></div>
+              <div class="form-group">
+                <div class="title">Szczegóły</div>
+                <dl class="kv">
+                  <dt>Wnioskodawca</dt><dd>Piotr Zieliński <span class="t-hint">(osoba fizyczna)</span></dd>
+                  <dt>Forma odp.</dt><dd>E-mail</dd>
+                  <dt>Kanał wpływu</dt><dd>Poczta / papier</dd>
+                  <dt>Data wpływu</dt><dd class="num">23.11.2026</dd>
+                  <dt>Maks. przedłużenie</dt><dd class="num">25.01.2027 ↷</dd>
+                  <dt>Prowadzący</dt><dd><span class="avatar avatar-sm">MK</span> Magdalena Kos</dd>
+                  <dt>Powiązane</dt><dd><span class="src">412/2025</span> <span class="src">588/2026</span></dd>
+                </dl>
+              </div>
+              <div class="form-group">
+                <div class="title">Historia</div>
+                <ol class="timeline">
+                  <li><span class="t">27.11 10:42</span><span class="d ok"></span><span>MK wgrała odpowiedź WOŚ (2 pliki)</span></li>
+                  <li><span class="t">23.11 09:31</span><span class="d"></span><span>MK oznaczyła notatki jako wysłane: WOŚ, WGK</span></li>
+                  <li><span class="t">23.11 09:24</span><span class="d ai"></span><span>Asystent zaproponował 3 wydziały; MK zaakceptowała 2, usunęła Wydz. Finansów</span></li>
+                  <li><span class="t">23.11 09:20</span><span class="d ai"></span><span>Dopasowanie 412/2025 (82%) — użyto struktury odpowiedzi</span></li>
+                  <li><span class="t">23.11 09:14</span><span class="d"></span><span>MK zarejestrowała wniosek; termin 07.12.2026</span></li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>On the internal deadline day a department that hasn't replied is highlighted, and the officer is reminded in the bell. A reminder note can be copied, but the system still never sends it.</span></div>
+    <div class="note"><b>2</b><span>"Przygotuj projekt odpowiedzi" works even with one department still missing. Missing points are then flagged as gaps in s11.</span></div>
+    <div class="note"><b>3</b><span>Violet dots in the history are assistant suggestions. Each one records what the officer did with it, as required by the "assistant, not decision maker" rule.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s10 ═════════════════════════════ -->
+<section class="screen" id="s10">
+  <div class="screen-meta">
+    <h2>10. Wgranie odpowiedzi wydziału (drawer)</h2>
+    <p>The officer uploads the department's reply, assigns it to the points it answers and sees at once what was extracted, including personal data found in the attachment.</p>
+    <div class="screen-refs"><span class="ref">US-E1</span><span class="ref">US-E2</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026?upload=wgk</span></div>
+    <div class="app app-taller drawer-scrim">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Kalendarz wniosków|BKS.IV.1431.617.2026"></header>
+        <main class="page"><div class="form-head"><span class="title">BKS.IV.1431.617.2026 — Wycinka drzew i nasadzenia zastępcze 2026</span></div></main>
+      </div>
+      <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="s10-title" style="width:34rem">
+        <div class="drawer-head"><div class="grow"><h3 id="s10-title" class="t-section">Odpowiedź wydziału</h3><span class="t-hint">BKS.IV.1431.617.2026</span></div><button class="btn btn-ghost btn-icon btn-sm" type="button" aria-label="Zamknij" data-goto="s9"><svg><use href="#ic-x"/></svg></button></div>
+        <div class="drawer-body">
+          <div class="field"><label>Wydział <span class="req">*</span></label><select class="select"><option>Wydział Gospodarki Komunalnej</option></select></div>
+          <div class="stack-2">
+            <div class="file-row"><svg><use href="#ic-file"/></svg><div class="grow"><div class="strong">WGK.7021.88.2026.docx</div><div class="t-hint">pismo przewodnie · 2 str.</div></div><span class="badge badge-success"><svg><use href="#ic-check"/></svg>odczytano</span></div>
+            <div class="file-row"><svg><use href="#ic-file"/></svg><div class="grow"><div class="strong">Umowa_18_WGK_2026.pdf</div><div class="t-hint">skan · 24 str. · OCR 96%</div></div><span class="badge badge-warning"><svg><use href="#ic-eye-off"/></svg>9 danych osobowych</span></div>
+            <div class="dropzone" style="padding:0.75rem"><span>Upuść kolejne pliki — PDF, DOCX, XLSX, JPG</span></div>
+          </div>
+          <div class="field"><label>Odpowiada na pytania</label>
+            <div class="row wrap"><span class="chip chip-active"><span class="pnum pnum-sm">3</span> koszty</span><span class="chip chip-active"><span class="pnum pnum-sm">4</span> umowa</span><span class="chip">+ inne</span></div>
+          </div>
+          <div class="field"><label>Rodzaj odpowiedzi</label>
+            <div class="segmented"><button type="button" aria-selected="true">Informacja udzielona</button><button type="button" aria-selected="false">Częściowo</button><button type="button" aria-selected="false">Nie posiadamy</button><button type="button" aria-selected="false">Odmowa / ochrona</button></div>
+          </div>
+          <div class="ai-box stack-2">
+            <div class="row"><svg style="width:0.875rem;height:0.875rem"><use href="#ic-sparkles"/></svg><strong>Wyodrębniono</strong></div>
+            <ul class="points">
+              <li><span class="pnum pnum-sm">3</span><span>Koszt usunięcia drzew: <strong class="num">486 200,00 zł</strong> brutto; nasadzeń: <strong class="num">1 132 500,00 zł</strong> brutto <span class="src">WGK s. 1</span></span></li>
+              <li><span class="pnum pnum-sm">4</span><span>Umowa nr 18/WGK/2026 z „Zieleń-Serwis” sp. z o.o., z 2 aneksami <span class="src">WGK s. 2</span></span></li>
+            </ul>
+            <span class="t-hint">Dane osobowe w umowie: podpisy (4), prywatne telefony (2), PESEL wspólnika s.c. podwykonawcy (1), adres zamieszkania (2). Do decyzji w s12.</span>
+          </div>
+          <div class="field"><label>Data otrzymania</label><input class="input num" value="30.11.2026" /></div>
+        </div>
+        <div class="drawer-foot"><span class="t-hint" style="margin-right:auto"><span class="kbd">Esc</span> · <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span></span><button class="btn btn-outline" type="button" data-goto="s9">Anuluj</button><button class="btn btn-primary" type="button" data-goto="s11"><svg><use href="#ic-save"/></svg> Zapisz odpowiedź</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Under §11 ust. 8 departments should anonymise before sending. The system still checks every attachment, because the city is liable for whatever leaves BKS.</span></div>
+    <div class="note"><b>2</b><span>"Nie posiadamy" asks which entity holds the information and offers the "not held / forwarded" letter type in s11. "Odmowa / ochrona" attaches the department's refusal-decision draft.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s11 ═════════════════════════════ -->
+<section class="screen" id="s11">
+  <div class="screen-meta">
+    <h2>11. Projekt odpowiedzi</h2>
+    <p>The assistant assembles the letter on the BKS template from the department replies. Every factual paragraph cites its source, and anything unsupported is flagged so the officer can catch hallucinations.</p>
+    <div class="screen-refs"><span class="ref">US-F1</span><span class="ref">US-F2</span><span class="ref">D6</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026/draft</span></div>
+    <div class="app app-taller">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|BKS.IV.1431.617.2026|Projekt odpowiedzi"></header>
+        <main class="page">
+          <div class="form-head">
+            <div class="row-3"><a class="back-link" href="#s9" data-goto="s9"><svg><use href="#ic-chevron-left"/></svg> Sprawa</a><span class="title">Projekt odpowiedzi · wersja 2</span><span class="badge badge-warning"><span class="dot"></span>Odpowiedź w przygotowaniu</span></div>
+            <div class="row"><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-history"/></svg> Wersje</button><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-save"/></svg> Zapisz</button><button class="btn btn-primary btn-sm" type="button" data-goto="s12"><svg><use href="#ic-eye-off"/></svg> Dalej: anonimizacja</button></div>
+          </div>
+          <div class="split split-side">
+            <div class="letter">
+              <div class="letterhead"><div><div class="org">URZĄD MIASTA BYDGOSZCZY</div><div class="t-hint">Biuro Komunikacji Społecznej · ul. Jezuicka 1, 85-102 Bydgoszcz</div></div><div class="right"><div>Bydgoszcz, dnia 1 grudnia 2026 r.</div><div class="t-mono t-hint">BKS.IV.1431.617.2026</div></div></div>
+              <p>Pan<br/>Piotr Zieliński<br/><span class="t-hint">(e-mail wskazany we wniosku)</span></p>
+              <p class="para">W odpowiedzi na wniosek z dnia 19 listopada 2026 r. (data wpływu: 23 listopada 2026 r.) o udostępnienie informacji publicznej dotyczącej usuwania drzew i nasadzeń zastępczych na nieruchomościach Miasta Bydgoszczy, na podstawie materiałów przygotowanych przez komórki merytoryczne, tj. Wydział Ochrony Środowiska oraz Wydział Gospodarki Komunalnej Urzędu Miasta Bydgoszczy, uprzejmie informuję:</p>
+              <p class="para"><strong>Ad 1.</strong> W 2026 r. (stan na 27 listopada 2026 r.) na nieruchomościach Miasta Bydgoszczy usunięto 312 drzew. Zestawienie z podziałem na dzielnice stanowi załącznik nr 1. <span class="src">WOŚ.6131.1204.2026 s. 1</span></p>
+              <p class="para"><strong>Ad 2.</strong> W związku z usunięciem drzew wykonano 418 nasadzeń zastępczych, a kolejne 222 zaplanowano do 30 kwietnia 2027 r. <span class="src">WOŚ.6131.1204.2026 s. 2</span></p>
+              <p class="para"><strong>Ad 3.</strong> Łączny koszt usunięcia drzew wyniósł 486 200,00 zł brutto, a nasadzeń zastępczych 1 132 500,00 zł brutto. <span class="src">WGK.7021.88.2026 s. 1</span></p>
+              <p class="para flag"><strong>Ad 4.</strong> W załączeniu przekazuję kopię umowy nr 18/WGK/2026 wraz z aneksami, po anonimizacji danych osobowych. Umowa jest również dostępna w Rejestrze umów Biuletynu Informacji Publicznej. <span class="src src-missing"><svg><use href="#ic-warn"/></svg>brak źródła dla zdania 2</span></p>
+              <p class="para gap">Jednocześnie informuję, że informacje dotyczące drzew rosnących w pasach drogowych dróg publicznych pozostają w posiadaniu Zarządu Dróg Miejskich i Komunikacji Publicznej w Bydgoszczy. <span class="src src-missing"><svg><use href="#ic-sparkles"/></svg>propozycja asystenta — potwierdź</span></p>
+              <p>Załączniki:<br/>1. Zestawienie_usuniete_drzewa_2026.xlsx<br/>2. Umowa_18_WGK_2026_zanonimizowana.pdf</p>
+              <p style="text-align:right">Łączę wyrazy szacunku,<br/>Biuro Komunikacji Społecznej<br/>Urząd Miasta Bydgoszczy<br/>e-mail: bip@um.bydgoszcz.pl</p>
+            </div>
+            <div class="stack-3">
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Rodzaj pisma</div>
+                <select class="select"><option>Odpowiedź — udostępnienie informacji</option><option>Zawiadomienie o przedłużeniu terminu (kwerenda)</option><option>Wezwanie do doprecyzowania</option><option>Wskazanie publikacji w BIP</option><option>Informacja: nie stanowi informacji publicznej / brak w posiadaniu</option><option>Projekt decyzji o odmowie (art. 16)</option><option>Pozostawienie bez rozpoznania</option></select>
+                <span class="t-hint">Zmiana rodzaju wygeneruje pismo od nowa (z ostrzeżeniem).</span>
+              </div>
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Kontrola projektu</div>
+                <div class="row"><svg style="width:1rem;height:1rem;color:var(--status-success-icon)"><use href="#ic-check-circle"/></svg><span>4/4 pytania mają odpowiedź</span></div>
+                <div class="row"><svg style="width:1rem;height:1rem;color:var(--status-success-icon)"><use href="#ic-check-circle"/></svg><span>Kwoty i liczby zgodne ze źródłami</span></div>
+                <div class="row"><svg style="width:1rem;height:1rem;color:var(--status-warning-icon)"><use href="#ic-warn"/></svg><span>1 zdanie bez źródła (Ad 4)</span></div>
+                <div class="row"><svg style="width:1rem;height:1rem;color:var(--status-error-icon)"><use href="#ic-warn"/></svg><span>1 akapit spoza materiałów wydziałów</span></div>
+                <div class="row"><svg style="width:1rem;height:1rem;color:var(--status-warning-icon)"><use href="#ic-eye-off"/></svg><span>Anonimizacja: 9 sugestii do decyzji</span></div>
+              </div>
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Źródła</div>
+                <span class="src"><svg><use href="#ic-file"/></svg>WOŚ.6131.1204.2026.pdf</span>
+                <span class="src"><svg><use href="#ic-file"/></svg>zestawienie_dzielnice.xlsx</span>
+                <span class="src"><svg><use href="#ic-file"/></svg>WGK.7021.88.2026.docx</span>
+                <span class="src"><svg><use href="#ic-file"/></svg>Umowa_18_WGK_2026.pdf</span>
+                <span class="src"><svg><use href="#ic-archive"/></svg>struktura: 412/2025</span>
+              </div>
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Zaznaczony akapit</div>
+                <div class="row wrap"><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-refresh"/></svg> Przeredaguj</button><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-trash"/></svg> Usuń</button><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-check"/></svg> Potwierdzam</button></div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Source chips link to the exact page of the department file. A number in the draft that doesn't match its source turns the paragraph red. Here a sentence about BIP and a paragraph on ZDMiKP come from the assistant, not from a department, so they are flagged until confirmed or removed.</span></div>
+    <div class="note"><b>2</b><span>All letter types (D6) share this editor and the letterhead. Extension and clarification letters can also be opened straight from their dialogs (s14, s15).</span></div>
+    <div class="note"><b>3</b><span>The draft can't be marked "przygotowana" while red gaps remain, unless the officer confirms each one explicitly.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s12 ═════════════════════════════ -->
+<section class="screen" id="s12">
+  <div class="screen-meta">
+    <h2>12. Anonimizacja — pismo i załączniki</h2>
+    <p>Suggested personal data is shown in grey. One click accepts it and blacks it out, a second click keeps it visible with a recorded reason, and the officer can add marks by selecting text. Export stays locked until every suggestion is decided.</p>
+    <div class="screen-refs"><span class="ref">§4 D7</span><span class="ref">US-G1</span><span class="ref">UMB: dane podlegające anonimizacji</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026/anonymise?doc=umowa</span></div>
+    <div class="app app-taller">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|BKS.IV.1431.617.2026|Anonimizacja"></header>
+        <main class="page">
+          <div class="form-head">
+            <div class="row-3"><a class="back-link" href="#s11" data-goto="s11"><svg><use href="#ic-chevron-left"/></svg> Projekt</a><span class="title">Anonimizacja</span><span class="badge badge-warning num">7 z 9 zdecydowanych</span></div>
+            <div class="row"><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-eye-off"/></svg> Podgląd po anonimizacji</button><button class="btn btn-primary btn-sm is-disabled" type="button" title="Najpierw zdecyduj o wszystkich sugestiach">Eksportuj</button><button class="btn btn-ghost btn-sm" type="button" data-goto="s13">(podgląd: po decyzjach →)</button></div>
+          </div>
+          <div class="tabs">
+            <button type="button" aria-selected="false">Pismo <span class="tab-count">0</span></button>
+            <button type="button" aria-selected="false">Zał. 1 — zestawienie <span class="tab-count">0</span></button>
+            <button type="button" aria-selected="true">Zał. 2 — umowa <span class="tab-count">9</span></button>
+            <button type="button" aria-selected="false">Kopia do archiwum <span class="tab-count">3</span></button>
+          </div>
+          <div class="split split-side">
+            <div class="stack-3">
+              <div class="pages">
+                <div class="page-thumb"><span class="ln"></span><span class="ln"></span><span class="ln rdl"></span><span class="ln"></span><span class="pn">1</span></div>
+                <div class="page-thumb"><span class="ln"></span><span class="ln"></span><span class="ln"></span><span class="pn">2</span></div>
+                <div class="page-thumb active"><span class="ln"></span><span class="ln sgl"></span><span class="ln rdl"></span><span class="ln"></span><span class="ln rdl"></span><span class="pn">23</span></div>
+                <div class="page-thumb"><span class="ln"></span><span class="ln rdl"></span><span class="ln sgl"></span><span class="pn">24</span></div>
+                <div class="page-thumb"><span class="ln"></span><span class="ln"></span><span class="pn">…</span></div>
+              </div>
+              <div class="letter" style="font-size:0.8125rem">
+                <p class="t-hint">Umowa nr 18/WGK/2026 · strona 23 z 24 · § 14 Przedstawiciele stron</p>
+                <p>1. Osobą odpowiedzialną za realizację umowy ze strony Zamawiającego jest <span class="rd rd-kept" title="Osoba pełniąca funkcję publiczną — nie anonimizuje się">insp. Joanna Kwiatkowska, Wydział Gospodarki Komunalnej</span>, tel. służbowy (52) 58 58 000.</p>
+                <p>2. Koordynatorem prac ze strony Wykonawcy jest <span class="rd rd-done">Marek Olszewski</span>, tel. <span class="rd rd-done">601 234 567</span>, e-mail <span class="rd rd-done">m.olszewski.prywatny@example.com</span>.</p>
+                <p>3. Podwykonawcą robót w dzielnicy Fordon jest „Zielony Kąt” s.c. <span class="rd rd-done">Barbara Nowak</span>, PESEL <span class="rd rd-suggest">74010112345</span>, zam. <span class="rd rd-suggest">ul. Leśna 8, 86-005 Białe Błota</span>.</p>
+                <p>4. Wynagrodzenie ryczałtowe za rok 2026 wynosi 1 618 700,00 zł brutto (słownie: …).</p>
+                <p style="display:flex;justify-content:space-between;margin-top:1.25rem"><span>ZAMAWIAJĄCY<br/><em>z up. Prezydenta Miasta</em><br/>/podpis kwalifikowany/</span><span>WYKONAWCA<br/><span class="rd rd-done">/podpis odręczny/</span><br/>Prezes Zarządu „Zieleń-Serwis” sp. z o.o.</span></p>
+              </div>
+            </div>
+            <div class="stack-3">
+              <div class="card card-pad">
+                <div class="t-card-title" style="margin-bottom:0.5rem">Kategorie (lista UMB)</div>
+                <div class="cat-row"><span>Imię i nazwisko osoby prywatnej</span><span class="row"><span class="badge badge-neutral num">2/2</span></span></div>
+                <div class="cat-row"><span>Numer PESEL</span><span class="row"><span class="badge badge-warning num">0/1</span><button class="btn btn-ghost btn-xs" type="button">Akceptuj</button></span></div>
+                <div class="cat-row"><span>Adres zamieszkania</span><span class="row"><span class="badge badge-warning num">0/1</span><button class="btn btn-ghost btn-xs" type="button">Akceptuj</button></span></div>
+                <div class="cat-row"><span>Prywatny telefon / e-mail</span><span class="badge badge-neutral num">2/2</span></div>
+                <div class="cat-row"><span>Własnoręczny podpis</span><span class="badge badge-neutral num">1/1</span></div>
+                <div class="cat-row"><span>Osoba pełniąca funkcję publiczną</span><span class="badge badge-success">pozostawiono 1</span></div>
+                <div class="cat-row"><span>Tajemnica przedsiębiorstwa</span><span class="badge badge-neutral">brak</span></div>
+              </div>
+              <div class="card card-pad stack-2">
+                <div class="t-card-title">Legenda</div>
+                <div class="row"><span class="rd rd-suggest">szary</span><span class="t-hint">sugestia asystenta — kliknij, aby zaakceptować</span></div>
+                <div class="row"><span class="rd rd-done">czarny</span><span class="t-hint">zaakceptowane — zostanie usunięte</span></div>
+                <div class="row"><span class="rd rd-kept">podkreślony</span><span class="t-hint">pozostawiony (z uzasadnieniem)</span></div>
+                <span class="t-hint">Zaznacz dowolny fragment tekstu, aby dodać ręcznie.</span>
+              </div>
+              <div class="alert alert-info"><svg><use href="#ic-info"/></svg><div>Kopia do archiwum dodatkowo ukrywa dane wnioskodawcy, aby mogła służyć jako wzór do przyszłych odpowiedzi.</div></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Try it in Clickable mode: clicking a mark cycles grey (suggested) → black (accepted) → underlined (kept with reason) → grey. Every decision is logged with user and time.</span></div>
+    <div class="note"><b>2</b><span>The names of officials acting in a public function (the inspector here) are not suggested, and the panel says why. The company president's name stays visible; only the handwritten signature is removed.</span></div>
+    <div class="note"><b>3</b><span>Export burns the redaction into a new PDF: text is removed, not just covered. The original stays in the internal case file.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s13 ═════════════════════════════ -->
+<section class="screen" id="s13">
+  <div class="screen-meta">
+    <h2>13. Eksport i oznaczenie wysyłki</h2>
+    <p>The officer downloads the final letter and the redacted attachments, sends them from the official mailbox outside the system, then records the date and channel. That closes the case and adds it to the archive.</p>
+    <div class="screen-refs"><span class="ref">US-H1</span><span class="ref">US-H2</span><span class="ref">§2.3</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/617-2026/draft#export</span></div>
+    <div class="app app-tall modal-scrim">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|BKS.IV.1431.617.2026|Projekt odpowiedzi"></header>
+        <main class="page"><div class="form-head"><span class="title">Projekt odpowiedzi · wersja 3</span></div></main>
+      </div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="s13-title">
+        <div class="modal-head"><h3 id="s13-title" class="t-section">Eksport odpowiedzi</h3><p class="t-hint" style="margin:0.25rem 0 0">Wszystkie sugestie anonimizacji rozstrzygnięte · projekt sprawdzony przez MK 01.12.2026 11:05</p></div>
+        <div class="modal-body">
+          <div class="stack-2">
+            <div class="file-row"><svg><use href="#ic-file"/></svg><div class="grow"><div class="strong">Odpowiedz_BKS.IV.1431.617.2026.docx</div><div class="t-hint">pismo na papierze firmowym · do podpisu</div></div><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-download"/></svg> DOCX</button><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-download"/></svg> PDF</button></div>
+            <div class="file-row"><svg><use href="#ic-file"/></svg><div class="grow"><div class="strong">Zal1_Zestawienie_usuniete_drzewa_2026.xlsx</div><div class="t-hint">bez danych osobowych</div></div><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-download"/></svg></button></div>
+            <div class="file-row"><svg><use href="#ic-file"/></svg><div class="grow"><div class="strong">Zal2_Umowa_18_WGK_2026_zanonimizowana.pdf</div><div class="t-hint">9 obszarów usuniętych trwale</div></div><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-download"/></svg></button></div>
+            <button class="btn btn-ghost btn-sm" type="button" style="align-self:flex-start"><svg><use href="#ic-download"/></svg> Pobierz wszystko (.zip)</button>
+          </div>
+          <div class="form-group">
+            <div class="title">Po wysłaniu poza systemem</div>
+            <div class="form-grid form-grid-2">
+              <div class="field"><label>Data udzielenia odpowiedzi <span class="req">*</span></label><input class="input num" value="01.12.2026" /></div>
+              <div class="field"><label>Kanał</label><select class="select"><option>E-mail (bip@um.bydgoszcz.pl)</option><option>ePUAP</option><option>Poczta</option><option>Odbiór osobisty</option></select></div>
+            </div>
+            <label class="row"><button class="check" type="button" aria-checked="true" aria-label="Dodaj do archiwum"><svg><use href="#ic-check"/></svg></button> Dodaj zanonimizowaną kopię do archiwum (źródło dla przyszłych podobnych wniosków)</label>
+          </div>
+          <div class="alert alert-success"><svg><use href="#ic-check-circle"/></svg><div>Termin dotrzymany: odpowiedź 6 dni przed terminem (07.12.2026).</div></div>
+        </div>
+        <div class="modal-foot">
+          <span class="t-hint"><span class="kbd">Esc</span> anuluj · <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> zapisz</span>
+          <div class="row"><button class="btn btn-outline" type="button" data-goto="s12">Anuluj</button><button class="btn btn-primary" type="button" data-goto="s1"><svg><use href="#ic-check"/></svg> Oznacz jako wysłane</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>There is no "Wyślij" button anywhere in the product (§2.3). The record keeps the date, channel and user. Data odpowiedzi then appears in the calendar and the case leaves the open list.</span></div>
+    <div class="note"><b>2</b><span>A sending date after the deadline is accepted but shown in red, and counted in the supervisor's statistics (s17).</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s14 ═════════════════════════════ -->
+<section class="screen" id="s14">
+  <div class="screen-meta">
+    <h2>14. Przedłużenie terminu — kwerenda (stan na 18.11.2026)</h2>
+    <p>When the departments need more time, the officer extends the deadline within the statutory two months and gets the notice to the requester drafted in the same dialog.</p>
+    <div class="screen-refs"><span class="ref">§4 D2</span><span class="ref">US-H3</span><span class="ref">art. 13 ust. 2 UDIP</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/598-2026?action=extend</span></div>
+    <div class="app app-taller modal-scrim">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Kalendarz wniosków|BKS.IV.1431.598.2026"></header>
+        <main class="page"><div class="form-head"><span class="title">BKS.IV.1431.598.2026 — Opieka nad bezdomnymi zwierzętami 2025</span></div></main>
+      </div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="s14-title" style="width:48rem">
+        <div class="modal-head"><h3 id="s14-title" class="t-section">Przedłużenie terminu (art. 13 ust. 2)</h3><p class="t-hint" style="margin:0.25rem 0 0">Wpływ 05.11.2026 · termin pierwotny 19.11.2026 (jutro)</p></div>
+        <div class="modal-body">
+          <div class="split split-2">
+            <div class="stack-3">
+              <div class="field"><label>Nowy termin <span class="req">*</span></label><input class="input num" value="18.12.2026" /><span class="t-hint">Maksymalnie <strong>05.01.2027</strong> (2 miesiące od wpływu). Proponowany: termin wydziału + 5 dni roboczych.</span></div>
+              <div class="field"><label>Powód opóźnienia <span class="req">*</span></label><select class="select"><option>Konieczność przeprowadzenia całościowej kwerendy</option><option>Duża objętość dokumentacji do anonimizacji</option><option>Konieczność uzyskania informacji z kilku wydziałów</option><option>Inny (opisz)</option></select></div>
+              <div class="field"><label>Uzasadnienie od wydziału</label><textarea class="textarea" rows="3">WZiSS: zestawienie kosztów za 2025 r. wymaga zebrania faktur od 3 wykonawców; przewidywany termin przekazania materiału: 11.12.2026.</textarea></div>
+              <div class="alert alert-info"><svg><use href="#ic-info"/></svg><div>Zawiadomienie musi dotrzeć do wnioskodawcy przed upływem terminu pierwotnego (19.11). Zapis po tym dniu zostanie oznaczony w historii.</div></div>
+            </div>
+            <div class="letter" style="font-size:0.8125rem;padding:1.25rem 1.5rem">
+              <div class="letterhead"><div class="org">URZĄD MIASTA BYDGOSZCZY</div><div class="t-hint right">18.11.2026<br/>BKS.IV.1431.598.2026</div></div>
+              <p>W odpowiedzi na wystosowany przez Państwa wniosek o udostępnienie informacji publicznej dotyczący sposobu i skutków wykonywania zadania „opieka nad bezdomnymi zwierzętami i ich wyłapywanie” w 2025 r., ze względu na <strong>konieczność przeprowadzenia całościowej kwerendy</strong> w zakresie wnioskowanych danych, powiadamiam, że ostateczna odpowiedź nastąpi w terminie wskazanym w art. 13 ust. 2 ustawy z dnia 6 września 2001 r. o dostępie do informacji publicznej — orientacyjny termin udzielenia odpowiedzi: <strong>18 grudnia br.</strong></p>
+              <p>Łączę wyrazy szacunku,<br/>Biuro Komunikacji Społecznej</p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-foot">
+          <span class="t-hint"><span class="kbd">Esc</span> anuluj · <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> zapisz</span>
+          <div class="row"><button class="btn btn-outline" type="button" data-goto="s1">Anuluj</button><button class="btn btn-outline" type="button"><svg><use href="#ic-download"/></svg> Pobierz zawiadomienie</button><button class="btn btn-primary" type="button" data-goto="s1"><svg><use href="#ic-check"/></svg> Przedłuż i oznacz zawiadomienie jako wysłane</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>The date field refuses anything past the two-month limit (shifted off a weekend or holiday if needed). After saving, the calendar shows "Kwerenda +29 dni" and the original deadline in brackets (s1, row 11).</span></div>
+    <div class="note"><b>2</b><span>The letter text follows the sample notice BKS.IV.1431.543 (2025). The officer can open it in the full editor (s11) before downloading.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s15 ═════════════════════════════ -->
+<section class="screen" id="s15">
+  <div class="screen-meta">
+    <h2>15. Wezwanie do doprecyzowania (stan na 23.11.2026 — dziś mija 7 dni)</h2>
+    <p>The deadline clock is paused while the requester has 7 days to clarify. Today that window closes, so the officer records the reply, which starts a new 14-day period, or leaves the request unprocessed.</p>
+    <div class="screen-refs"><span class="ref">§4 D3</span><span class="ref">US-H4</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/requests/595-2026</span></div>
+    <div class="app app-taller">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Kalendarz wniosków|BKS.IV.1431.595.2026"></header>
+        <main class="page">
+          <div class="form-head">
+            <div class="row-3"><a class="back-link" href="#s1" data-goto="s1"><svg><use href="#ic-chevron-left"/></svg> Kalendarz</a><span class="title">BKS.IV.1431.595.2026 — Dokumentacja apartamentowca przy ul. Nadbrzeżnej</span><span class="badge badge-neutral"><svg><use href="#ic-pause"/></svg>Oczekuje na doprecyzowanie</span></div>
+          </div>
+          <div class="alert alert-info"><svg><use href="#ic-pause"/></svg><div class="grow"><div class="alert-title">Bieg terminu wstrzymany od 13.11.2026</div>Wezwanie doręczono 16.11.2026 — wnioskodawca ma czas do <strong>dziś, 23.11.2026</strong>. Termin pierwotny (17.11) nie biegnie.</div></div>
+          <div class="split split-2">
+            <div class="form-group">
+              <div class="title">Wnioskodawca odpowiedział</div>
+              <div class="field"><label>Data wpływu doprecyzowania</label><input class="input num" value="23.11.2026" /></div>
+              <div class="dropzone" style="padding:1rem"><svg><use href="#ic-upload"/></svg><span>Wgraj odpowiedź wnioskodawcy (e-mail, skan)</span></div>
+              <div class="deadline-box"><span class="t-overline">Nowy termin</span><span class="big">07.12.2026</span><span class="calc">23.11 + 14 dni = 07.12 (pon.)</span><label class="row t-hint"><button class="switch" type="button" role="switch" aria-checked="false" aria-label="Ustaw ręcznie"></button> Ustaw termin ręcznie (np. jak w piśmie z 10.08.2026: „18 września br.”)</label></div>
+              <button class="btn btn-primary" type="button" data-goto="s9"><svg><use href="#ic-check"/></svg> Zarejestruj doprecyzowanie i wznów</button>
+            </div>
+            <div class="form-group">
+              <div class="title">Brak odpowiedzi w terminie</div>
+              <p class="t-hint" style="margin:0">Jeśli do końca dnia nie wpłynie doprecyzowanie, wniosek zostanie pozostawiony bez rozpoznania. Asystent przygotował pismo informujące wnioskodawcę.</p>
+              <div class="letter" style="font-size:0.8125rem;padding:1rem 1.25rem"><p style="margin:0">… w związku z brakiem doprecyzowania wniosku w wyznaczonym terminie 7 dni od doręczenia wezwania z dnia 13 listopada 2026 r., uprzejmie informuję, że wniosek pozostawia się bez rozpoznania …</p></div>
+              <button class="btn btn-outline" type="button"><svg><use href="#ic-x"/></svg> Pozostaw bez rozpoznania (od 24.11)</button>
+              <hr class="separator" />
+              <div class="title">Wysłane wezwanie</div>
+              <div class="file-row"><svg><use href="#ic-file"/></svg><div class="grow"><div class="strong">Wezwanie_doprecyzowanie_595_2026.docx</div><div class="t-hint">wysłane 13.11 · doręczone 16.11 (ePUAP UPD)</div></div></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Requesting clarification opens a dialog like s14: the scope that needs clarifying, which department asked for it, and a letter based on the sample "WEZWANIE DO DOPRECYZOWANIA ZAKRESU OTRZYMANEGO WNIOSKU". It is recorded as sent with a separate delivery date, because the 7 days count from delivery.</span></div>
+    <div class="note"><b>2</b><span>By default (D3, open question Q2) a reply starts a fresh 14 days. The "ustaw ręcznie" switch covers BKS's current practice of naming a date in the letter itself.</span></div>
+    <div class="note"><b>3</b><span>The left-unprocessed button only becomes available the day after the window closes, so a reply arriving late in the day is never lost.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s16 ═════════════════════════════ -->
+<section class="screen" id="s16">
+  <div class="screen-meta">
+    <h2>16. Stany błędów i ryzyka</h2>
+    <p>What goes wrong in practice: an unreadable scan, a case number already taken, a case past its deadline because a department hasn't replied, and no similar requests found.</p>
+    <div class="screen-refs"><span class="ref">US-B1</span><span class="ref">US-B2</span><span class="ref">US-A1</span><span class="ref">US-C1</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/… (stany)</span></div>
+    <div class="app app-tall">
+      <aside class="sidebar" data-active="s1"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Stany błędów"></header>
+        <main class="page">
+          <div class="split split-2">
+            <div class="state-card"><div class="cap">Rejestracja — OCR nieudany</div><div class="inner stack-3">
+              <div class="file-row"><svg><use href="#ic-scan"/></svg><div class="grow"><div class="strong">zdjecie_telefon_wniosek.jpg</div><div class="t-hint">2,1 MB</div></div><span class="badge badge-error">OCR 31%</span></div>
+              <div class="alert alert-error"><svg><use href="#ic-warn"/></svg><div><div class="alert-title">Nie udało się wiarygodnie odczytać dokumentu</div>Zdjęcie jest nieostre lub przekrzywione. Zeskanuj ponownie albo wpisz treść ręcznie — oryginał zostanie dołączony do sprawy.</div></div>
+              <div class="row"><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-refresh"/></svg> Spróbuj ponownie</button><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-pencil"/></svg> Wpisz ręcznie</button></div>
+            </div></div>
+            <div class="state-card"><div class="cap">Rejestracja — konflikt numeru</div><div class="inner stack-3">
+              <div class="field"><label>Numer sprawy <span class="req">*</span></label><input class="input input-invalid t-mono" value="BKS.IV.1431.613.2026" /><span class="field-error">Numer jest już użyty (Tomasz Wrzos, 19.11.2026). Wolny: BKS.IV.1431.617.2026.</span></div>
+              <div class="alert alert-warning"><svg><use href="#ic-warn"/></svg><div><div class="alert-title">Sprawa zmieniona przez inną osobę</div>TL zapisał zmiany 2 min temu. <a href="#s9" data-goto="s9">Odśwież</a> lub porównaj, zanim nadpiszesz.</div></div>
+            </div></div>
+            <div class="state-card"><div class="cap">Sprawa po terminie — BKS.IV.1431.597.2026</div><div class="inner stack-3">
+              <div class="alert alert-error"><svg><use href="#ic-warn"/></svg><div class="grow"><div class="alert-title">Termin minął 20.11.2026 (3 dni temu)</div>Wydział Promocji nie przekazał materiału (termin wewn. 13.11). Nie wysłano zawiadomienia o przedłużeniu.</div></div>
+              <div class="row wrap"><button class="btn btn-outline btn-sm" type="button"><svg><use href="#ic-copy"/></svg> Kopiuj ponaglenie do wydziału</button><button class="btn btn-outline btn-sm" type="button" data-goto="s11"><svg><use href="#ic-file"/></svg> Odpowiedź częściowa</button><button class="btn btn-ghost btn-sm" type="button" data-goto="s17">Zgłoś kierownikowi</button></div>
+              <span class="t-hint">Asystent nie proponuje przedłużenia po terminie — art. 13 ust. 2 wymaga zawiadomienia przed jego upływem.</span>
+            </div></div>
+            <div class="state-card"><div class="cap">Podobne wnioski — brak wyników</div><div class="inner">
+              <div class="empty" style="padding:1.5rem">
+                <span class="empty-icon"><svg><use href="#ic-archive"/></svg></span>
+                <strong>Brak podobnych wniosków w archiwum</strong>
+                <span class="t-hint" style="max-width:32ch">Przeszukano 1 284 wnioski z 24 miesięcy. Asystent zaproponuje wydziały na podstawie struktury organizacyjnej i przepisów.</span>
+                <div class="row"><button class="btn btn-outline btn-sm" type="button">Rozszerz do 5 lat</button><button class="btn btn-primary btn-sm" type="button" data-goto="s7">Dalej: propozycja ścieżki</button></div>
+              </div>
+            </div></div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>An overdue case can no longer be extended under art. 13 ust. 2, so the assistant doesn't offer it. It suggests a reminder and a partial answer, and lets the officer escalate to the supervisor.</span></div>
+    <div class="note"><b>2</b><span>The conflict bar is the platform's standard optimistic-locking pattern (<code>surfaceRecordConflict</code>), applied to cases.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s17 ═════════════════════════════ -->
+<section class="screen" id="s17">
+  <div class="screen-meta">
+    <h2>17. Pulpit kierownika BKS</h2>
+    <p>The supervisor sees team workload and cases at risk, reassigns before a deadline slips, and approves letters that need sign-off.</p>
+    <div class="screen-refs"><span class="ref">US-A3</span><span class="ref">§3 Supervisor</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/dashboard</span></div>
+    <div class="app app-tall">
+      <aside class="sidebar" data-active="s17"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Pulpit kierownika"></header>
+        <main class="page">
+          <div class="page-head"><div><h1 class="t-page-title">Pulpit kierownika</h1><p>Zespół AIP · listopad 2026</p></div><div class="page-actions"><span class="chip chip-active">Rok 2026 <svg><use href="#ic-chevron-down"/></svg></span></div></div>
+          <div class="kpis">
+            <div class="card kpi"><span class="t-hint">Odpowiedzi w terminie</span><span class="v">96,4%</span><span class="delta up">+3,1 pp r/r</span></div>
+            <div class="card kpi"><span class="t-hint">Średni czas odpowiedzi</span><span class="v">9,2 dnia</span><span class="delta up">−2,4 dnia od wdrożenia</span></div>
+            <div class="card kpi"><span class="t-hint">Wnioski w 2026</span><span class="v">617</span><span class="t-hint">w tym 41 z kwerendą</span></div>
+            <div class="card kpi"><span class="t-hint">Odpowiedzi z archiwum</span><span class="v">23%</span><span class="t-hint">użyto dopasowania</span></div>
+          </div>
+          <div class="split split-2">
+            <div class="card">
+              <div class="card-head"><span class="t-card-title">Obciążenie zespołu</span><div class="legend"><span><i style="background:var(--chart-blue)"></i>otwarte</span><span><i style="background:var(--status-warning-icon)"></i>≤ 3 dni</span><span><i style="background:var(--status-error-icon)"></i>po terminie</span></div></div>
+              <div class="card-body stack-3">
+                <div class="load"><span><span class="avatar avatar-sm">MK</span> Magdalena Kos</span><span class="bars"><span class="b-ok" style="width:50%"></span><span class="b-warn" style="width:12%"></span></span><span class="num t-hint">5 otw. · 1 pilny</span></div>
+                <div class="load"><span><span class="avatar avatar-sm">TL</span> Tomasz Lis</span><span class="bars"><span class="b-ok" style="width:30%"></span><span class="b-warn" style="width:10%"></span><span class="b-err" style="width:10%"></span></span><span class="num t-hint">4 otw. · 1 po term.</span></div>
+                <div class="load"><span><span class="avatar avatar-sm">EN</span> Ewa Nowicka</span><span class="bars"><span class="b-ok" style="width:20%"></span><span class="b-warn" style="width:10%"></span></span><span class="num t-hint">3 otw. · 1 dziś</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head"><span class="t-card-title">Do akceptacji</span><span class="badge badge-warning">2</span></div>
+              <div class="card-body stack-3">
+                <div class="between"><div><div class="strong">Projekt decyzji o odmowie — 605/2026</div><div class="t-hint">Wynagrodzenia zarządów spółek — część danych to tajemnica przedsiębiorstwa (MK)</div></div><button class="btn btn-outline btn-sm" type="button">Przejrzyj</button></div>
+                <div class="between"><div><div class="strong">Przedłużenie — 608/2026 do 15.01.2027</div><div class="t-hint">Remont ul. Szubińskiej — 3 wydziały (EN)</div></div><button class="btn btn-outline btn-sm" type="button" data-goto="s14">Przejrzyj</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="dt">
+            <div class="dt-head"><div class="dt-head-row"><h2 class="t-table-title">Sprawy zagrożone</h2></div></div>
+            <table class="table">
+              <thead><tr><th>Nr sprawy</th><th>Przedmiot</th><th>Termin</th><th>Ryzyko</th><th>Prow.</th><th class="right"></th></tr></thead>
+              <tbody>
+                <tr class="row-overdue"><td class="t-mono">597/2026</td><td>Kampania promocyjna 2026</td><td class="num">20.11</td><td>Wydział nie odpowiedział</td><td><span class="avatar avatar-sm">TL</span></td><td class="right"><button class="btn btn-outline btn-xs" type="button" data-goto="s16">Otwórz</button></td></tr>
+                <tr class="row-tomorrow"><td class="t-mono">602/2026</td><td>Fontanny miejskie 2025</td><td class="num">24.11</td><td>Projekt niegotowy</td><td><span class="avatar avatar-sm">MK</span></td><td class="right"><button class="btn btn-outline btn-xs" type="button">Przekaż innej osobie</button></td></tr>
+                <tr><td class="t-mono">604/2026</td><td>Zezwolenia alkoholowe</td><td class="num">26.11</td><td>1 z 2 wydziałów bez odpowiedzi</td><td><span class="avatar avatar-sm">TL</span></td><td class="right"><button class="btn btn-outline btn-xs" type="button">Przekaż innej osobie</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>"Przekaż innej osobie" opens a small dialog (new officer, reason) and logs the change on the case. The new officer is told in the bell.</span></div>
+    <div class="note"><b>2</b><span>Refusal decisions are signed by the President or an authorised person (§12). The system only records the supervisor's approval of the draft (open question Q6).</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s18 ═════════════════════════════ -->
+<section class="screen" id="s18">
+  <div class="screen-meta">
+    <h2>18. Archiwum — wyszukiwarka odpowiedzi</h2>
+    <p>Free search over every past request and its anonymised answer, by meaning rather than exact words. Used for ad-hoc questions and for building new answers.</p>
+    <div class="screen-refs"><span class="ref">US-C2</span><span class="ref">Wyzwanie pkt 5</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/archive?q=uczniowie+cudzoziemcy</span></div>
+    <div class="app app-tall">
+      <aside class="sidebar" data-active="s18"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Wnioski UDIP|Archiwum"></header>
+        <main class="page">
+          <div class="page-head"><div><h1 class="t-page-title">Archiwum odpowiedzi</h1><p>1 284 sprawy · 2024–2026 · wyłącznie wersje zanonimizowane</p></div><div class="page-actions"><button class="btn btn-outline" type="button" data-goto="s19"><svg><use href="#ic-upload"/></svg> Importuj archiwum</button></div></div>
+          <div class="card card-pad stack-3">
+            <div class="input-group"><div class="sidebar-search" style="height:2.5rem"><svg><use href="#ic-search"/></svg> <span style="color:var(--foreground)">ilu cudzoziemców uczy się w szkołach podstawowych</span></div><button class="btn btn-primary" type="button">Szukaj</button></div>
+            <div class="row wrap"><span class="chip chip-active">Wyszukiwanie semantyczne</span><span class="chip chip-dashed">Rok</span><span class="chip chip-dashed">Wydział: Edukacji i Sportu</span><span class="chip chip-dashed">Rodzaj pisma</span><span class="chip chip-dashed">Z załącznikami</span></div>
+          </div>
+          <div class="stack-3">
+            <div class="match">
+              <div class="between"><div class="row-3"><span class="t-mono strong">BKS.IV.1431.600.2026</span><span class="t-hint">w toku · termin dziś</span></div><span class="sim"><span class="track"><span style="width:94%"></span></span>94%</span></div>
+              <div>Liczba uczniów cudzoziemców w szkołach podstawowych — stan na 30.09.2026</div>
+              <div class="why"><span class="chip">Wydz. Edukacji i Sportu</span> · odpowiedź przygotowana · <a href="#s9" data-goto="s9">otwórz sprawę</a></div>
+            </div>
+            <div class="match">
+              <div class="between"><div class="row-3"><span class="t-mono strong">BKS.IV.1431.307.2025</span><span class="t-hint">08.07.2025 · wysłano</span></div><span class="sim"><span class="track"><span style="width:88%"></span></span>88%</span></div>
+              <div>Aktualne zestawienie liczby uczniów w szkołach podstawowych, w tym liczba obcokrajowców w poszczególnych szkołach</div>
+              <div class="quote">„…na podstawie materiału przygotowanego przez komórkę merytoryczną tj. <mark>Wydział Edukacji i Sportu</mark> przekazuję w załączeniu odpowiedź. Załącznik: Informacja_307”</div>
+              <div class="why"><span class="src"><svg><use href="#ic-file"/></svg>Informacja_307.xlsx</span> · wnioskodawca: <span class="rd rd-done">██████</span> · <span>Odpowiedź w 6 dni</span></div>
+            </div>
+            <div class="match">
+              <div class="between"><div class="row-3"><span class="t-mono strong">BKS.IV.1431.181.2024</span><span class="t-hint">19.04.2024 · wysłano</span></div><span class="sim mid"><span class="track"><span style="width:63%"></span></span>63%</span></div>
+              <div>Liczba dzieci z Ukrainy w przedszkolach i szkołach prowadzonych przez Miasto</div>
+              <div class="why"><span class="chip">Wydz. Edukacji i Sportu</span> · wskazano publikację w BIP</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>The archive stores only the anonymised copies made at closing (s13) or at import. Requester identity is always blacked out, and BKS can see it only through the live case.</span></div>
+    <div class="note"><b>2</b><span>Semantic search runs on a local embedding index. A "dokładna fraza" toggle switches to plain full-text search over the same records.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s19 ═════════════════════════════ -->
+<section class="screen" id="s19">
+  <div class="screen-meta">
+    <h2>19. Baza wiedzy — ustawy, zarządzenia, archiwum</h2>
+    <p>The knowledge admin "teaches" the assistant by uploading current laws, amendments, internal ordinances and the archive. Everything runs on the city's own server.</p>
+    <div class="screen-refs"><span class="ref">§2.6</span><span class="ref">US-I1</span><span class="ref">Wyzwanie pkt 1</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/knowledge</span></div>
+    <div class="app app-tall">
+      <aside class="sidebar" data-active="s19"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Asystent|Baza wiedzy"></header>
+        <main class="page">
+          <div class="split split-side">
+            <div class="dt">
+              <div class="dt-head">
+                <div class="dt-head-row"><h2 class="t-table-title">Źródła wiedzy</h2><div class="dt-head-actions"><button class="btn btn-outline" type="button"><svg><use href="#ic-archive"/></svg> Import archiwum (wnioski + odpowiedzi)</button><button class="btn btn-primary" type="button"><svg><use href="#ic-upload"/></svg> Dodaj dokument</button></div></div>
+                <div class="dt-toolbar"><div class="dt-toolbar-row"><span class="chip chip-active">Wszystkie</span><span class="chip">Ustawy</span><span class="chip">Zarządzenia</span><span class="chip">Archiwum</span><span class="chip">Struktura</span><span class="chip">Wzory pism</span></div></div>
+              </div>
+              <table class="table">
+                <thead><tr><th>Dokument</th><th>Typ</th><th>Wersja / obowiązuje od</th><th>Indeks</th><th class="right"></th></tr></thead>
+                <tbody>
+                  <tr><td><div class="strong">Ustawa o dostępie do informacji publicznej</div><div class="t-hint">Dz. U. z 2022 r. poz. 902, z 2025 r. poz. 1844</div></td><td><span class="badge badge-info"><svg><use href="#ic-scale"/></svg>Ustawa</span></td><td class="num">t.j. 2022 + zm. 2025</td><td><span class="idx"><span class="progress"><span style="width:100%"></span></span>gotowy</span></td><td class="right"><button class="btn btn-ghost btn-xs" type="button">Nowa wersja</button></td></tr>
+                  <tr><td><div class="strong">Kodeks postępowania administracyjnego</div><div class="t-hint">terminy (art. 57), doręczenia</div></td><td><span class="badge badge-info"><svg><use href="#ic-scale"/></svg>Ustawa</span></td><td class="num">t.j. 2025</td><td><span class="idx"><span class="progress"><span style="width:100%"></span></span>gotowy</span></td><td class="right"><button class="btn btn-ghost btn-xs" type="button">Nowa wersja</button></td></tr>
+                  <tr><td><div class="strong">Zarządzenie nr 535/2024 Prezydenta Miasta</div><div class="t-hint">zasady i tryb udostępniania informacji publicznej</div></td><td><span class="badge badge-neutral">Zarządzenie</span></td><td class="num">23.09.2024</td><td><span class="idx"><span class="progress"><span style="width:100%"></span></span>gotowy</span></td><td class="right"><button class="btn btn-ghost btn-xs" type="button">Nowa wersja</button></td></tr>
+                  <tr><td><div class="strong">Dane podlegające anonimizacji — lista UMB</div><div class="t-hint">28 kategorii · używana w s12</div></td><td><span class="badge badge-pink"><svg><use href="#ic-eye-off"/></svg>Reguły</span></td><td class="num">2026</td><td><span class="idx"><span class="progress"><span style="width:100%"></span></span>gotowy</span></td><td class="right"><button class="btn btn-ghost btn-xs" type="button">Edytuj</button></td></tr>
+                  <tr><td><div class="strong">Archiwum odpowiedzi 2024–2026</div><div class="t-hint">1 284 pary wniosek + odpowiedź · 38 bez pary</div></td><td><span class="badge badge-success"><svg><use href="#ic-archive"/></svg>Archiwum</span></td><td class="num">import 15.11.2026</td><td><span class="idx"><span class="progress progress-warning"><span style="width:97%"></span></span>97%</span></td><td class="right"><button class="btn btn-ghost btn-xs" type="button">Popraw pary</button></td></tr>
+                  <tr><td><div class="strong">Regulamin organizacyjny UMB</div><div class="t-hint">import ze stron BIP: wydziały, biura</div></td><td><span class="badge badge-neutral"><svg><use href="#ic-building"/></svg>Struktura</span></td><td class="num">import 02.11.2026</td><td><span class="idx"><span class="progress"><span style="width:100%"></span></span>gotowy</span></td><td class="right"><button class="btn btn-ghost btn-xs" type="button" data-goto="s20">Otwórz</button></td></tr>
+                  <tr><td><div class="strong">Wzory pism BKS (7)</div><div class="t-hint">odpowiedź, kwerenda, wezwanie, BIP, odmowa…</div></td><td><span class="badge badge-neutral"><svg><use href="#ic-file"/></svg>Wzory</span></td><td class="num">v4 · 10.11.2026</td><td><span class="idx"><span class="progress"><span style="width:100%"></span></span>gotowy</span></td><td class="right"><button class="btn btn-ghost btn-xs" type="button">Edytuj</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="stack-3">
+              <div class="card card-pad stack-2">
+                <div class="row"><span class="offline-pill"><svg><use href="#ic-wifi-off"/></svg> Offline</span></div>
+                <div class="t-card-title">Środowisko asystenta</div>
+                <dl class="kv" style="grid-template-columns:6rem minmax(0,1fr)">
+                  <dt>Model</dt><dd>Bielik 11B (lokalnie, GPU w serwerowni UMB) <span class="t-hint">— propozycja</span></dd>
+                  <dt>Wektory</dt><dd>multilingual-e5 · indeks lokalny</dd>
+                  <dt>OCR</dt><dd>Tesseract (pol) lokalnie</dd>
+                  <dt>Internet</dt><dd>brak dostępu</dd>
+                </dl>
+              </div>
+              <div class="alert alert-info"><svg><use href="#ic-info"/></svg><div><div class="alert-title">Nowa wersja ustawy</div>Poprzednia wersja zostaje zachowana dla spraw zarejestrowanych przed datą wejścia w życie zmian.</div></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Archive import takes a folder of request and answer files (PDF/DOCX), pairs them by case number (BKS.IV.1431.x.yyyy), runs anonymisation and only then indexes them. Unpaired files are listed for manual pairing.</span></div>
+    <div class="note"><b>2</b><span>The model and tools listed are a proposal for the closed environment the brief requires (pt. 8). The hackathon build may use a hosted model on synthetic data only.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s20 ═════════════════════════════ -->
+<section class="screen" id="s20">
+  <div class="screen-meta">
+    <h2>20. Struktura organizacyjna — wydziały i zakresy kompetencji</h2>
+    <p>Routing suggestions are only as good as this list. The knowledge admin imports departments from BIP and refines each one's competence scope and typical topics.</p>
+    <div class="screen-refs"><span class="ref">US-I2</span><span class="ref">Q5</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/departments</span></div>
+    <div class="app app-tall drawer-scrim">
+      <aside class="sidebar" data-active="s20"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Asystent|Struktura organizacyjna"></header>
+        <main class="page">
+          <div class="dt">
+            <div class="dt-head"><div class="dt-head-row"><h2 class="t-table-title">Komórki organizacyjne (34)</h2><div class="dt-head-actions"><button class="btn btn-outline" type="button"><svg><use href="#ic-refresh"/></svg> Importuj z BIP</button><button class="btn btn-primary" type="button"><svg><use href="#ic-plus"/></svg> Dodaj</button></div></div></div>
+            <table class="table">
+              <thead><tr><th>Nazwa</th><th>Symbol</th><th>Typ</th><th>Spraw w 2026</th></tr></thead>
+              <tbody>
+                <tr><td>Wydział Edukacji i Sportu</td><td class="t-mono">WES</td><td>wydział</td><td class="num">74</td></tr>
+                <tr><td>Wydział Gospodarki Komunalnej</td><td class="t-mono">WGK</td><td>wydział</td><td class="num">58</td></tr>
+                <tr class="row-focus"><td>Wydział Ochrony Środowiska</td><td class="t-mono">WOŚ</td><td>wydział</td><td class="num">41</td></tr>
+                <tr><td>Wydział Administracji Budowlanej</td><td class="t-mono">WAB</td><td>wydział</td><td class="num">39</td></tr>
+                <tr><td>Zarząd Dróg Miejskich i Komunikacji Publicznej</td><td class="t-mono">ZDMiKP</td><td><span class="badge badge-warning">jednostka — odrębny podmiot</span></td><td class="num">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+      <div class="drawer" role="dialog" aria-modal="true" aria-labelledby="s20-title">
+        <div class="drawer-head"><div class="grow"><h3 id="s20-title" class="t-section">Wydział Ochrony Środowiska</h3><span class="t-hint">źródło: BIP, import 02.11.2026</span></div><button class="btn btn-ghost btn-icon btn-sm" type="button" aria-label="Zamknij"><svg><use href="#ic-x"/></svg></button></div>
+        <div class="drawer-body">
+          <div class="field"><label>Zakres kompetencji (z regulaminu)</label><textarea class="textarea" rows="4">Zezwolenia na usunięcie drzew i krzewów; nasadzenia zastępcze; ochrona przyrody; programy ochrony powietrza; gospodarka odpadami (część planistyczna).</textarea></div>
+          <div class="field"><div class="label-row"><span>Typowe tematy wniosków</span><span class="ai-tag"><svg><use href="#ic-sparkles"/></svg>z archiwum</span></div><div class="row wrap"><span class="chip">wycinka drzew</span><span class="chip">smog / jakość powietrza</span><span class="chip">pomniki przyrody</span><span class="chip">dokarmianie ptaków</span><span class="chip chip-dashed">+ dodaj</span></div></div>
+          <div class="field"><label>Adres do zapytań (poza systemem)</label><input class="input" value="wos@um.bydgoszcz.pl (przykład)" /></div>
+          <div class="field"><label>Domyślny termin wewnętrzny</label><select class="select"><option>5 dni roboczych przed terminem ustawowym</option></select></div>
+        </div>
+        <div class="drawer-foot"><button class="btn btn-outline" type="button">Anuluj</button><button class="btn btn-primary" type="button"><svg><use href="#ic-save"/></svg> Zapisz</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>Department names and symbols here are illustrative. The real list comes from the BIP pages for departments and offices (Q5), and re-importing shows a diff so reorganisations are visible.</span></div>
+    <div class="note"><b>2</b><span>Municipal units such as ZDMiKP or Straż Miejska are flagged as separate obligated entities. That is what triggers the legal note in s7.</span></div>
+  </div>
+</section>
+
+<!-- ═════════════════════════════ s21 ═════════════════════════════ -->
+<section class="screen" id="s21">
+  <div class="screen-meta">
+    <h2>21. Ustawienia terminów i kalendarz świąt</h2>
+    <p>How deadlines are counted is a deliberate, visible setting, because the brief (14 working days) and the statute (14 days) disagree. Reminders and the holiday calendar live here too.</p>
+    <div class="screen-refs"><span class="ref">§4 D1</span><span class="ref">US-I3</span><span class="ref">Q1</span></div>
+  </div>
+  <div class="frame">
+    <div class="frame-bar"><div class="frame-dots"><i></i><i></i><i></i></div><span class="frame-url">/backend/udip/settings/deadlines</span></div>
+    <div class="app app-tall">
+      <aside class="sidebar" data-active="s21"></aside>
+      <div class="main">
+        <header class="topbar" data-crumbs="Asystent|Ustawienia terminów"></header>
+        <main class="page">
+          <div class="form-layout">
+            <div class="form-col">
+              <div class="form-group">
+                <div class="title">Liczenie terminu odpowiedzi</div>
+                <label class="row" style="align-items:flex-start"><input type="radio" name="count" checked /> <span><strong>14 dni kalendarzowych od dnia wpływu</strong> <span class="badge badge-success">zalecane</span><br/><span class="t-hint">art. 13 ust. 1 UDIP; dzień wpływu nie wlicza się (art. 57 § 1 KPA)</span></span></label>
+                <label class="row" style="align-items:flex-start"><input type="radio" name="count" /> <span><strong>14 dni roboczych</strong><br/><span class="t-hint">praktyka wewnętrzna — dłuższy termin niż ustawowy, ryzyko przekroczenia</span></span></label>
+                <label class="row"><button class="switch" type="button" role="switch" aria-checked="true" aria-label="Przesuwaj"></button> Przesuwaj termin z soboty lub dnia wolnego na najbliższy dzień roboczy (art. 57 § 4 KPA)</label>
+                <div class="field"><label>Maksymalny termin po przedłużeniu</label><input class="input" value="2 miesiące od dnia wpływu (art. 13 ust. 2)" disabled /></div>
+              </div>
+              <div class="form-group">
+                <div class="title">Doprecyzowanie i wydziały</div>
+                <div class="form-grid form-grid-2">
+                  <div class="field"><label>Czas na doprecyzowanie</label><input class="input" value="7 dni od doręczenia" /></div>
+                  <div class="field"><label>Po doprecyzowaniu</label><select class="select"><option>Nowe 14 dni od wpływu doprecyzowania</option><option>Termin ustalany ręcznie</option></select></div>
+                  <div class="field"><label>Termin wewnętrzny dla wydziałów</label><input class="input" value="5 dni roboczych przed terminem" /></div>
+                  <div class="field"><label>Wyróżniaj w kalendarzu</label><input class="input" value="dziś (czerwony), jutro (żółty)" /></div>
+                </div>
+              </div>
+            </div>
+            <div class="form-col">
+              <div class="form-group">
+                <div class="title">Kalkulator</div>
+                <div class="calc">10.12.2026 + 14 dni = 24.12 (czw., Wigilia — wolne)<br/>→ 25.12, 26.12 wolne, 27.12 niedziela<br/>→ <strong style="color:var(--foreground)">28.12.2026 (pon.)</strong></div>
+                <hr class="separator" />
+                <div class="calc">tryb dni roboczych: 23.11 + 14 dni rob. = 11.12.2026</div>
+              </div>
+              <div class="form-group">
+                <div class="title">Dni wolne 2026/2027</div>
+                <div class="t-hint">01.11 Wszystkich Świętych · 11.11 Święto Niepodległości · 24.12 Wigilia · 25–26.12 Boże Narodzenie · 01.01 Nowy Rok · 06.01 Trzech Króli</div>
+                <button class="btn btn-outline btn-sm" type="button" style="align-self:flex-start"><svg><use href="#ic-plus"/></svg> Dodaj dzień wolny</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-foot"><span class="t-hint">Zmiana trybu liczenia dotyczy tylko nowych spraw; istniejące zachowują wyliczony termin.</span><div class="actions"><button class="btn btn-outline" type="button">Anuluj</button><button class="btn btn-primary" type="button"><svg><use href="#ic-save"/></svg> Zapisz</button></div></div>
+        </main>
+      </div>
+    </div>
+  </div>
+  <div class="notes">
+    <div class="note"><b>1</b><span>The default follows the statute. Switching to working days would set deadlines later than the law allows, so the option carries a warning. Decision Q1 is still open.</span></div>
+    <div class="note"><b>2</b><span>The holiday calendar includes 24 December, a public holiday in Poland since 2025. Each year's dates are generated in advance and can be edited.</span></div>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function () {
+  var NAV = [
+    { group: 'Wnioski UDIP', items: [
+      { id: 's1', icon: 'ic-calendar', label: 'Kalendarz wniosków', count: '11' },
+      { id: 's4', icon: 'ic-plus', label: 'Zarejestruj wniosek' },
+      { id: 's18', icon: 'ic-archive', label: 'Archiwum' },
+      { id: 's17', icon: 'ic-dashboard', label: 'Pulpit kierownika' }
+    ] },
+    { group: 'Asystent', items: [
+      { id: 's19', icon: 'ic-book', label: 'Baza wiedzy' },
+      { id: 's20', icon: 'ic-building', label: 'Struktura organizacyjna' },
+      { id: 's21', icon: 'ic-sliders', label: 'Ustawienia terminów' }
+    ] }
+  ];
+  function icon(id) { return '<svg><use href="#' + id + '"/></svg>'; }
+  document.querySelectorAll('aside.sidebar[data-active]').forEach(function (aside) {
+    var active = aside.getAttribute('data-active');
+    var html = '<div class="sidebar-brand"><span class="brand-mark">UMB</span> <span class="ellipsis">Urząd Miasta Bydgoszczy</span></div>' +
+      '<div class="sidebar-search">' + icon('ic-search') + ' Szukaj</div><nav class="sidebar-nav">';
+    NAV.forEach(function (group) {
+      html += '<div class="nav-group"><span>' + group.group + '</span>' + icon('ic-chevron-down') + '</div><div class="nav-items">';
+      group.items.forEach(function (item) {
+        var isActive = item.id === active;
+        html += isActive
+          ? '<span class="nav-item active">' + icon(item.icon) + ' ' + item.label + (item.count ? '<span class="count">' + item.count + '</span>' : '') + '</span>'
+          : '<a class="nav-item" href="#' + item.id + '" data-goto="' + item.id + '">' + icon(item.icon) + ' ' + item.label + (item.count ? '<span class="count">' + item.count + '</span>' : '') + '</a>';
+      });
+      html += '</div>';
+    });
+    html += '</nav>';
+    aside.innerHTML = html;
+  });
+  document.querySelectorAll('header.topbar[data-crumbs]').forEach(function (header) {
+    var parts = header.getAttribute('data-crumbs').split('|');
+    var crumbs = icon('ic-home');
+    parts.forEach(function (part, index) {
+      crumbs += icon('ic-chevron-right') + (index === parts.length - 1 ? '<span class="here">' + part + '</span>' : '<span>' + part + '</span>');
+    });
+    header.innerHTML = '<div class="topbar-left"><div class="crumbs">' + crumbs + '</div></div>' +
+      '<div class="topbar-right"><span class="offline-pill" title="Model językowy działa lokalnie, bez dostępu do Internetu">' + icon('ic-wifi-off') + ' Asystent lokalny · offline</span>' +
+      '<div class="topbar-search">' + icon('ic-search') + ' Szukaj spraw… <span class="kbd" style="margin-left:auto">⌘K</span></div>' +
+      '<button class="icon-btn" type="button" aria-label="Powiadomienia">' + icon('ic-bell') + '<span class="badge-count">3</span></button>' +
+      '<span class="avatar" title="Magdalena Kos — BKS">MK</span></div>';
+  });
+  document.querySelectorAll('.app > .main').forEach(function (main) {
+    if (main.querySelector('.app-foot')) return;
+    var foot = document.createElement('footer');
+    foot.className = 'app-foot';
+    foot.innerHTML = '<span>Prototyp · dane fikcyjne</span><nav class="row-3"><span>Pomoc</span><span>Polityka bezpieczeństwa informacji</span></nav>';
+    main.appendChild(foot);
+  });
+
+  document.addEventListener('click', function (event) {
+    if (!document.body.classList.contains('proto-click')) return;
+    var mark = event.target.closest('.rd');
+    if (mark) {
+      if (mark.classList.contains('rd-suggest')) { mark.classList.remove('rd-suggest'); mark.classList.add('rd-done'); }
+      else if (mark.classList.contains('rd-done')) { mark.classList.remove('rd-done'); mark.classList.add('rd-kept'); }
+      else { mark.classList.remove('rd-kept'); mark.classList.add('rd-suggest'); }
+      return;
+    }
+    var check = event.target.closest('.check, .switch');
+    if (check) { check.setAttribute('aria-checked', String(check.getAttribute('aria-checked') !== 'true')); return; }
+    var channel = event.target.closest('.channel');
+    if (channel) {
+      channel.parentElement.querySelectorAll('.channel').forEach(function (other) { other.setAttribute('aria-pressed', 'false'); });
+      channel.setAttribute('aria-pressed', 'true');
+    }
+  });
+
+  var btn = document.getElementById('theme-toggle');
+  btn.addEventListener('click', function () {
+    document.documentElement.classList.toggle('dark');
+  });
+})();
+</script>
+<script src="comments.js"></script>
+<script src="prototype.js"></script>
+</body>
+</html>
