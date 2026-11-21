@@ -5,8 +5,10 @@ import { flash } from '@open-mercato/ui/backend/FlashMessages'
 import { useGuardedMutation } from '@open-mercato/ui/backend/injection/useGuardedMutation'
 import { caseAction } from '../api'
 
-export function useCaseMutation(requestId: string, onDone: () => Promise<void> | void) {
+export function useCaseMutation(requestId: string, onDone: () => Promise<void> | void, version?: string | null) {
   const t = useT()
+  const versionRef = React.useRef(version)
+  versionRef.current = version
   const [pending, setPending] = React.useState<string | null>(null)
   const { runMutation, retryLastMutation } = useGuardedMutation<{ formId: string; resourceKind: string; retryLastMutation: () => Promise<boolean> }>({
     contextId: `public-info-request-${requestId}`,
@@ -19,9 +21,10 @@ export function useCaseMutation(requestId: string, onDone: () => Promise<void> |
   const run = React.useCallback(
     async <T = Record<string, unknown>>(action: string, payload: Record<string, unknown> = {}, successMessage?: string): Promise<T | null> => {
       setPending(action)
+      const body = versionRef.current ? { expectedUpdatedAt: versionRef.current, ...payload } : payload
       try {
         const result = await runMutation({
-          operation: () => caseAction<T>(requestId, action, payload),
+          operation: () => caseAction<T>(requestId, action, body),
           context,
           mutationPayload: { action, ...payload },
         })

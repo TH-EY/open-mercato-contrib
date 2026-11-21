@@ -212,6 +212,7 @@
   "public_info_requests.event.similar_choice": "Decyzja o podobnej sprawie",
   "public_info_requests.event.status_changed": "Zmiana statusu",
   "public_info_requests.event.updated": "Zaktualizowano wniosek",
+  "public_info_requests.export.needsPrepared": "Aby wyeksportować pismo, uruchom wykrywanie danych osobowych i oznacz projekt jako przygotowany.",
   "public_info_requests.export.noSend": "Pobierz i wyślij samodzielnie — system niczego nie wysyła.",
   "public_info_requests.export.redacted": "DOCX zanonimizowany",
   "public_info_requests.export.title": "Eksport",

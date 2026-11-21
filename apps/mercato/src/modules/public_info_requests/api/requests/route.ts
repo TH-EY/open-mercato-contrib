@@ -1,3 +1,4 @@
+import { parseBooleanToken } from '@open-mercato/shared/lib/boolean'
 import { z } from 'zod'
 import type { EntityManager } from '@mikro-orm/postgresql'
 import { makeCrudRoute, type CrudCtx } from '@open-mercato/shared/lib/crud/factory'
@@ -23,7 +24,7 @@ const querySchema = z
     year: z.coerce.number().int().min(2000).max(2100).optional(),
     status: z.string().optional(),
     assigneeUserId: z.string().uuid().optional(),
-    mine: z.coerce.boolean().optional(),
+    mine: z.string().optional(),
     dueWithinDays: z.coerce.number().int().min(0).max(365).optional(),
     hideClosed: z.string().optional(),
     source: z.enum(['manual', 'import']).optional(),
@@ -142,7 +143,7 @@ export const { metadata, GET, POST, PUT, DELETE } = makeCrudRoute({
       if (statuses.length > 0) target.status = { $in: statuses }
       else if (query.hideClosed === 'true' && !isSingleRecord(query)) target.status = { $in: OPEN_STATUSES }
       if (query.assigneeUserId) target.assignee_user_id = query.assigneeUserId
-      if (query.mine && ctx.auth?.sub) target.assignee_user_id = String(ctx.auth.sub)
+      if (parseBooleanToken(query.mine ?? null) === true && ctx.auth?.sub) target.assignee_user_id = String(ctx.auth.sub)
       if (query.dueWithinDays !== undefined) {
         target.current_due_date = { $lte: addCalendarDays(today, query.dueWithinDays) }
       }

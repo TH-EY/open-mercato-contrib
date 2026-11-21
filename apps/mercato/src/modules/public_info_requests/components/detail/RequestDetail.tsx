@@ -46,7 +46,7 @@ export default function RequestDetail({ id }: { id: string }) {
   }, [id])
 
   React.useEffect(() => { void load() }, [load])
-  const { run, pending } = useCaseMutation(id, load)
+  const { run, pending } = useCaseMutation(id, load, detail?.request.updatedAt)
 
   if (error) return <ErrorMessage label={error} />
   if (!detail) return <LoadingMessage label={t('public_info_requests.common.loading', 'Loading…')} />
@@ -54,6 +54,7 @@ export default function RequestDetail({ id }: { id: string }) {
   const request = detail.request
   const closed = request.status === 'sent' || request.status === 'left_unprocessed'
   const latestDraft = detail.drafts[0] ?? null
+  const latestDraftPrepared = latestDraft?.status === 'ready' || latestDraft?.status === 'exported'
 
   const openDialog = (kind: DialogKind) => {
     const today = todayIsoLocal()
@@ -100,8 +101,8 @@ export default function RequestDetail({ id }: { id: string }) {
             ) : (
               <Button type="button" variant="outline" onClick={() => openDialog('clarification')}><PauseCircle className="size-4" />{t('public_info_requests.actions.requestClarification', 'Request clarification')}</Button>
             )}
-            <Button type="button" variant="outline" onClick={() => openDialog('extend')}><Clock className="size-4" />{t('public_info_requests.actions.extend', 'Extend deadline')}</Button>
-            <Button type="button" onClick={() => openDialog('markSent')}><Send className="size-4" />{t('public_info_requests.actions.markSent', 'Record as sent')}</Button>
+            <Button type="button" variant="outline" disabled={request.status === 'extended' || request.status === 'awaiting_clarification'} onClick={() => openDialog('extend')}><Clock className="size-4" />{t('public_info_requests.actions.extend', 'Extend deadline')}</Button>
+            <Button type="button" disabled={!latestDraftPrepared} title={latestDraftPrepared ? undefined : t('public_info_requests.export.needsPrepared', 'Run the personal data check and mark the draft as prepared to export it.')} onClick={() => openDialog('markSent')}><Send className="size-4" />{t('public_info_requests.actions.markSent', 'Record as sent')}</Button>
           </div>
         ) : null}
       </div>

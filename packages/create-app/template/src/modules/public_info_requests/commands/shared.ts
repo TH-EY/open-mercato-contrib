@@ -36,14 +36,17 @@ export type RequestCommandOutcome<TResult> = {
   removedChildren?: ChildRowSnapshot[]
 }
 
-export type RequestCommandArgs<TInput> = {
+export type RequestCommandArgs<TInput, TPre = undefined> = {
   em: EntityManager
   scope: Scope
   request: PublicInfoRequest
   input: TInput
   actorUserId: string | null
   ctx: CommandRuntimeContext
+  pre: TPre
 }
+
+export type RequestPrecomputeArgs<TInput> = Omit<RequestCommandArgs<TInput>, 'pre'>
 
 type StoredOutcome = {
   request: RequestSnapshot
@@ -165,11 +168,12 @@ async function restoreChildren(em: EntityManager, scope: Scope, children: ChildR
   }
 }
 
-export function defineRequestCommand<TInput extends { id: string; expectedUpdatedAt?: string }, TResult>(options: {
+export function defineRequestCommand<TInput extends { id: string; expectedUpdatedAt?: string }, TResult, TPre = undefined>(options: {
   id: string
   label: string
   schema: ZodType<TInput>
-  run: (args: RequestCommandArgs<TInput>) => Promise<RequestCommandOutcome<TResult>>
+  precompute?: (args: RequestPrecomputeArgs<TInput>) => Promise<TPre>
+  run: (args: RequestCommandArgs<TInput, TPre>) => Promise<RequestCommandOutcome<TResult>>
 }): CommandHandler<Record<string, unknown>, TResult> {
   const handler: CommandHandler<Record<string, unknown>, TResult> = {
     id: options.id,
@@ -191,9 +195,21 @@ export function defineRequestCommand<TInput extends { id: string; expectedUpdate
       const input = options.schema.parse(rawInput)
       const scope = ensureScope(ctx)
       const baseEm = ctx.container.resolve('em') as EntityManager
+      let pre = undefined as TPre
+      if (options.precompute) {
+        const readEm = baseEm.fork()
+        const snapshot = await loadRequestOr404(readEm, scope, input.id)
+        pre = await options.precompute({ em: readEm, scope, request: snapshot, input, actorUserId: actorOf(ctx), ctx })
+      }
       const stored = await baseEm.fork().transactional(async (em) => {
         const request = await loadRequestOr404(em, scope, input.id)
-        const outcome = await options.run({ em, scope, request, input, actorUserId: actorOf(ctx), ctx })
+        assertOptimisticLock({
+          resourceKind: REQUEST_ENTITY_ID,
+          resourceId: input.id,
+          expected: input.expectedUpdatedAt,
+          current: request.updatedAt,
+        })
+        const outcome = await options.run({ em, scope, request, input, actorUserId: actorOf(ctx), ctx, pre })
         request.updatedAt = new Date()
         await em.flush()
         const storedOutcome: StoredOutcome = {

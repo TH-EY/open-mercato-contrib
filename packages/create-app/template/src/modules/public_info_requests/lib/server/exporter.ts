@@ -5,7 +5,7 @@ import { findWithDecryption } from '@open-mercato/shared/lib/encryption/find'
 import { PublicInfoRedactionMark, PublicInfoResponseDraft } from '../../data/entities'
 import { loadRequestOr404, loadSettings } from './requests'
 import { buildLetterContext, loadCaseDocuments, requestPointsOrSummary, type LetterOptions } from './caseServices'
-import { assertMarksDecided, assertMarksFresh, redactDocumentText, redactParagraphs } from './redaction'
+import { assertDraftExportable, assertMarksDecided, assertMarksFresh, attachmentTextHash, readPiiChecked, redactDocumentText, redactParagraphs } from './redaction'
 import { escapeHtml, renderLetterHtml, renderLetterText } from '../drafting/render'
 import type { DraftParagraph, LetterType } from '../drafting/types'
 import type { RouteContext } from './routeContext'
@@ -83,8 +83,7 @@ export async function exportDraft(routeContext: RouteContext, requestId: string,
     undefined,
     scope,
   )
-  assertMarksDecided(marks)
-  assertMarksFresh(marks, draft.paragraphs, new Map())
+  assertDraftExportable(draft, marks)
   const settings = await loadSettings(em, scope)
   const points = await requestPointsOrSummary(em, scope, request)
   const options = (draft.letterOptions ?? {}) as LetterOptions & { departmentNames?: string[]; letterDate?: string }
@@ -111,8 +110,13 @@ export async function exportDocument(routeContext: RouteContext, requestId: stri
   const request = await loadRequestOr404(em, scope, requestId)
   const documents = await loadCaseDocuments(em, scope, requestId)
   const document = documents.find((candidate) => candidate.id === documentId)
-  if (!document) throw new CrudHttpError(404, { error: 'Document not found' })
+  if (!document || document.kind !== 'reply') throw new CrudHttpError(404, { error: 'Document not found' })
   const text = document.extractedText ?? ''
+  const drafts = await em.find(PublicInfoResponseDraft, { requestId, tenantId: scope.tenantId, organizationId: scope.organizationId, deletedAt: null })
+  const checkedHash = attachmentTextHash(text)
+  if (!drafts.some((draft) => readPiiChecked(draft.letterOptions).documents?.[documentId] === checkedHash)) {
+    throw new CrudHttpError(409, { error: 'Personal data check has not been run on this document', code: 'pii_not_checked' })
+  }
   const marks = await findWithDecryption(
     em,
     PublicInfoRedactionMark,

@@ -39,6 +39,32 @@ export function assertMarksDecided(marks: PublicInfoRedactionMark[]): void {
   }
 }
 
+export type PiiChecked = { paragraphs?: Record<string, string>; documents?: Record<string, string> }
+
+export function readPiiChecked(letterOptions: Record<string, unknown> | null | undefined): PiiChecked {
+  const value = letterOptions?.piiChecked
+  return value && typeof value === 'object' ? (value as PiiChecked) : {}
+}
+
+export function assertDraftExportable(
+  draft: { status: string; paragraphs: StoredDraftParagraph[]; letterOptions?: Record<string, unknown> | null },
+  marks: PublicInfoRedactionMark[],
+): void {
+  if (draft.status !== 'ready' && draft.status !== 'exported') {
+    throw new CrudHttpError(409, { error: 'Draft is not marked as prepared', code: 'draft_not_ready' })
+  }
+  const checked = readPiiChecked(draft.letterOptions).paragraphs ?? {}
+  const unchecked = draft.paragraphs.filter((paragraph) => {
+    if (paragraph.kind === 'closing' || !paragraph.text.trim()) return false
+    return checked[paragraph.id] !== (paragraph.contentHash || contentHash(paragraph.text))
+  })
+  if (unchecked.length > 0) {
+    throw new CrudHttpError(409, { error: 'Personal data check has not been run on the current text', code: 'pii_not_checked', paragraphIds: unchecked.map((paragraph) => paragraph.id) })
+  }
+  assertMarksDecided(marks)
+  assertMarksFresh(marks, draft.paragraphs, new Map())
+}
+
 export function redactParagraphs(paragraphs: StoredDraftParagraph[], marks: PublicInfoRedactionMark[], replacement = DEFAULT_REDACTION_REPLACEMENT): StoredDraftParagraph[] {
   return paragraphs.map((paragraph) => {
     const ranges = marks

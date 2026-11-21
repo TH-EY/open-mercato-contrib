@@ -46,7 +46,8 @@ export async function loadSettings(em: EntityManager, scope: Scope): Promise<Pub
     organizationId: scope.organizationId,
   })
   if (existing) return existing
-  const created = em.create(PublicInfoSettings, {
+  const writer = em.fork()
+  const created = writer.create(PublicInfoSettings, {
     tenantId: scope.tenantId,
     organizationId: scope.organizationId,
     deadlineMode: 'calendar',
@@ -60,8 +61,13 @@ export async function loadSettings(em: EntityManager, scope: Scope): Promise<Pub
     createdAt: new Date(),
     updatedAt: new Date(),
   })
-  await em.persist(created).flush()
-  return created
+  try {
+    await writer.persist(created).flush()
+  } catch (error) {
+    const raced = await em.fork().findOne(PublicInfoSettings, { tenantId: scope.tenantId, organizationId: scope.organizationId })
+    if (!raced) throw error
+  }
+  return (await em.findOne(PublicInfoSettings, { tenantId: scope.tenantId, organizationId: scope.organizationId })) ?? created
 }
 
 export function computeDeadlines(

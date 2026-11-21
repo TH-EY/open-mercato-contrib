@@ -142,6 +142,7 @@ export default function DraftPanel({ detail, run, pending }: Props) {
   const draftMarks = draft ? detail.marks.filter((mark) => mark.draftId === draft.id) : []
   const attachmentMarks = detail.marks.filter((mark) => mark.targetKind === 'attachment')
   const undecided = [...draftMarks, ...attachmentMarks].filter((mark) => mark.state === 'suggested').length
+  const prepared = draft?.status === 'ready' || draft?.status === 'exported'
   const blocking = draft ? draft.paragraphs.filter((paragraph) => paragraph.flags.length > 0 && !paragraph.confirmedBy).length : 0
   const replyDocuments = detail.documents.filter((document) => document.kind === 'reply' && document.extractedText)
 
@@ -263,16 +264,17 @@ export default function DraftPanel({ detail, run, pending }: Props) {
               <div className="text-xs text-muted-foreground">{t('public_info_requests.pii.hint', 'Click a highlighted fragment to accept or reject it.')}</div>
               {undecided > 0 ? <Alert status="warning"><AlertDescription>{t('public_info_requests.pii.undecided', '{count} suggestions not decided — export is blocked.', { count: undecided })}</AlertDescription></Alert> : null}
               {undecided > 0 ? (
-                <Button type="button" size="sm" variant="ghost" onClick={() => { void Promise.all([...draftMarks, ...attachmentMarks].filter((mark) => mark.state === 'suggested').map((mark) => run('mark-decide', { markId: mark.id, state: 'accepted' }))) }}>{t('public_info_requests.pii.acceptAll', 'Accept all suggestions')}</Button>
+                <Button type="button" size="sm" variant="ghost" disabled={pending === 'mark-decide'} onClick={() => { void run('mark-decide', { markIds: [...draftMarks, ...attachmentMarks].filter((mark) => mark.state === 'suggested').map((mark) => mark.id), state: 'accepted' }) }}>{t('public_info_requests.pii.acceptAll', 'Accept all suggestions')}</Button>
               ) : null}
             </div>
             <div className="space-y-2 rounded-lg border bg-card p-4">
               <div className="text-sm font-medium">{t('public_info_requests.export.title', 'Export')}</div>
               <div className="flex flex-wrap gap-2">
                 {(['docx', 'pdf', 'txt'] as const).map((format) => (
-                  <Button key={format} type="button" size="sm" variant="outline" disabled={undecided > 0} onClick={() => { void exportLetter(format) }}><Download className="size-4" />{format.toUpperCase()}</Button>
+                  <Button key={format} type="button" size="sm" variant="outline" disabled={undecided > 0 || !prepared} onClick={() => { void exportLetter(format) }}><Download className="size-4" />{format.toUpperCase()}</Button>
                 ))}
               </div>
+              {!prepared ? <div className="text-xs text-muted-foreground">{t('public_info_requests.export.needsPrepared', 'Run the personal data check and mark the draft as prepared to export it.')}</div> : null}
               <div className="text-xs text-muted-foreground">{t('public_info_requests.export.noSend', 'Download and send it yourself — the system never sends anything.')}</div>
             </div>
           </div>

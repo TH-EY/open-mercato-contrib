@@ -212,6 +212,7 @@
   "public_info_requests.event.similar_choice": "Similar-request decision recorded",
   "public_info_requests.event.status_changed": "Status changed",
   "public_info_requests.event.updated": "Request updated",
+  "public_info_requests.export.needsPrepared": "Run the personal data check and mark the draft as prepared to export it.",
   "public_info_requests.export.noSend": "Download and send it yourself — the system never sends anything.",
   "public_info_requests.export.redacted": "Redacted DOCX",
   "public_info_requests.export.title": "Export",

@@ -51,6 +51,20 @@ async function call(method, urlPath, body, { raw = false, form = null } = {}) {
   return json
 }
 
+async function decideAll(requestId, marks) {
+  const ids = marks.filter((mark) => mark.state === 'suggested').map((mark) => mark.id)
+  if (ids.length > 0) await call('POST', `/api/public_info_requests/requests/${requestId}/mark-decide`, { markIds: ids, state: 'accepted' })
+}
+
+async function prepareDraft(requestId, draftId) {
+  const detail = await call('GET', `/api/public_info_requests/requests/${requestId}/detail`)
+  const draft = detail.drafts.find((candidate) => candidate.id === draftId)
+  const flagged = draft.paragraphs.filter((paragraph) => paragraph.flags.length > 0 && !paragraph.confirmedBy).map((paragraph) => paragraph.id)
+  if (flagged.length > 0) await call('POST', `/api/public_info_requests/requests/${requestId}/draft-update`, { draftId, confirmParagraphIds: flagged })
+  await call('POST', `/api/public_info_requests/requests/${requestId}/draft-update`, { draftId, status: 'ready' })
+  return flagged.length
+}
+
 async function login() {
   const form = new FormData()
   form.set('email', email)
@@ -171,13 +185,14 @@ async function runSample(seq, files) {
   const filled = draft.paragraphs.filter((paragraph) => paragraph.kind === 'point' && paragraph.text.trim()).length
   steps.draft = `${expected.letterType}: ${draft.paragraphs.length} par, ${filled} filled${flags.length ? ', flags ' + [...new Set(flags)].join('/') : ''}`
 
+  const notReady = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&draftId=${draft.id}`, undefined, { raw: true })
   await call('POST', `/api/public_info_requests/requests/${requestId}/pii-detect`, { draftId: draft.id, includeAttachments: true })
   const afterDetect = await call('GET', `/api/public_info_requests/requests/${requestId}/detail`)
   const suggested = afterDetect.marks.filter((mark) => mark.state === 'suggested')
-  for (const mark of suggested) {
-    await call('POST', `/api/public_info_requests/requests/${requestId}/mark-decide`, { markId: mark.id, state: 'accepted' })
-  }
+  await decideAll(requestId, suggested)
   steps.pii = `${suggested.length} accepted (${[...new Set(suggested.map((mark) => mark.category))].join(',') || '—'})`
+  const confirmed = await prepareDraft(requestId, draft.id)
+  steps.prepared = `ready (export before: ${notReady.status}, ${confirmed} confirmed)`
 
   const exportResponse = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&draftId=${draft.id}`, undefined, { raw: true })
   let exportOk = exportResponse.ok
@@ -192,7 +207,7 @@ async function runSample(seq, files) {
   await call('POST', `/api/public_info_requests/requests/${requestId}/mark-sent`, { respondedAt: today, channel: 'email', addToArchive: true, draftId: draft.id })
   const final = await call('GET', `/api/public_info_requests/requests/${requestId}/detail`)
   steps.status = final.request.status
-  const pass = similarOk && routingOk && exportOk && final.request.status === 'sent' && (expected.letterType !== 'answer' || filled > 0)
+  const pass = similarOk && routingOk && exportOk && notReady.status === 409 && final.request.status === 'sent' && (expected.letterType !== 'answer' || filled > 0)
   createdCaseBySeq.set(seq, caseNumber)
   createdRequestIds.push(requestId)
   return { seq, pass, steps, caseNumber, requestId }
@@ -223,11 +238,27 @@ async function anonymisationProbe() {
   const reply = await call('POST', '/api/public_info_requests/documents', undefined, { form })
   await call('POST', `/api/public_info_requests/requests/${requestId}/record-reply`, { queryId: accepted.queryIds[0], replyKind: 'answered', receivedAt: today, replyAttachmentIds: [reply.id] })
   const generated = await call('POST', `/api/public_info_requests/requests/${requestId}/drafts`, { letterType: 'answer' })
+  const attachmentUnchecked = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&documentId=${reply.id}`, undefined, { raw: true })
   await call('POST', `/api/public_info_requests/requests/${requestId}/pii-detect`, { draftId: generated.draftId, includeAttachments: true })
+  await prepareDraft(requestId, generated.draftId)
   const detail = await call('GET', `/api/public_info_requests/requests/${requestId}/detail`)
   const suggested = detail.marks.filter((mark) => mark.state === 'suggested')
   const blocked = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&draftId=${generated.draftId}`, undefined, { raw: true })
-  for (const mark of suggested) await call('POST', `/api/public_info_requests/requests/${requestId}/mark-decide`, { markId: mark.id, state: 'accepted' })
+  await decideAll(requestId, suggested)
+  const edited = (await call('GET', `/api/public_info_requests/requests/${requestId}/detail`)).drafts.find((candidate) => candidate.id === generated.draftId)
+  const target = edited.paragraphs.find((paragraph) => paragraph.kind === 'point') ?? edited.paragraphs[0]
+  const injected = 'Kontakt prywatny: jan.nowak.prywatny@example.com.'
+  await call('POST', `/api/public_info_requests/requests/${requestId}/draft-update`, {
+    draftId: generated.draftId,
+    paragraphs: edited.paragraphs.map((paragraph) => (paragraph.id === target.id ? { ...paragraph, text: `${paragraph.text} ${injected}`, confirmedBy: 'forged' } : paragraph)),
+  })
+  const afterEdit = await call('GET', `/api/public_info_requests/requests/${requestId}/detail`)
+  const reDetected = afterEdit.marks.some((mark) => mark.state === 'suggested' && mark.excerpt.includes('jan.nowak.prywatny@example.com'))
+  const forgedIgnored = afterEdit.drafts.find((candidate) => candidate.id === generated.draftId).paragraphs.every((paragraph) => paragraph.confirmedBy !== 'forged')
+  const blockedAfterEdit = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&draftId=${generated.draftId}`, undefined, { raw: true })
+  await decideAll(requestId, afterEdit.marks)
+  await prepareDraft(requestId, generated.draftId)
+  secrets.push('jan.nowak.prywatny@example.com')
   const letter = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&draftId=${generated.draftId}`, undefined, { raw: true })
   const attachment = await call('GET', `/api/public_info_requests/requests/${requestId}/export?format=docx&documentId=${reply.id}`, undefined, { raw: true })
   const letterText = docxText(Buffer.from(await letter.arrayBuffer()))
@@ -235,8 +266,21 @@ async function anonymisationProbe() {
   const leaks = secrets.filter((secret) => letterText.includes(secret) || attachmentText.includes(secret))
   const officialKept = attachmentText.includes('Joanna Kwiatkowska')
   createdRequestIds.push(requestId)
-  const pass = blocked.status === 409 && leaks.length === 0 && officialKept && suggested.length >= 4
-  return { seq: 'PII', pass, steps: { marks: `${suggested.length} (${[...new Set(suggested.map((mark) => mark.category))].join(',')})`, blockedBeforeDecision: blocked.status, leaks: leaks.join('|') || 'none', publicOfficialKept: officialKept } }
+  const pass = blocked.status === 409 && attachmentUnchecked.status === 409 && blockedAfterEdit.status === 409 && reDetected && forgedIgnored && letter.ok && attachment.ok && leaks.length === 0 && officialKept && suggested.length >= 4
+  return {
+    seq: 'PII',
+    pass,
+    steps: {
+      marks: `${suggested.length} (${[...new Set(suggested.map((mark) => mark.category))].join(',')})`,
+      blockedBeforeDecision: blocked.status,
+      attachmentBeforeCheck: attachmentUnchecked.status,
+      editReDetected: reDetected,
+      blockedAfterEdit: blockedAfterEdit.status,
+      forgedConfirmationIgnored: forgedIgnored,
+      leaks: leaks.join('|') || 'none',
+      publicOfficialKept: officialKept,
+    },
+  }
 }
 
 async function main() {
