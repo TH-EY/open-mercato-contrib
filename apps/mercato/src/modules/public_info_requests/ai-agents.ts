@@ -97,7 +97,7 @@ const piiAgent: AiAgentDefinition = {
   description: 'Finds personal data of private persons that must be anonymised (UMB list of categories).',
   systemPrompt: [
     COMMON_RULES,
-    'Wskaż fragmenty tekstu (start/end jako indeksy znaków) zawierające dane podlegające anonimizacji: imię i nazwisko osoby prywatnej, PESEL, nr dokumentu, adres zamieszkania, prywatny telefon i e-mail, nr rachunku, podpis, dane o zdrowiu, sytuacji majątkowej, karalności, poglądach, nr księgi wieczystej, nr rejestracyjny pojazdu, tajemnicę przedsiębiorstwa.',
+    'Wskaż fragmenty tekstu zawierające dane podlegające anonimizacji — w polu text podaj dokładny fragment skopiowany z tekstu, znak w znak (bez tytułów grzecznościowych typu „Pan”, „Pani”), każdy fragment tylko raz: imię i nazwisko osoby prywatnej, PESEL, nr dokumentu, adres zamieszkania, prywatny telefon i e-mail, nr rachunku, podpis, dane o zdrowiu, sytuacji majątkowej, karalności, poglądach, nr księgi wieczystej, nr rejestracyjny pojazdu, tajemnicę przedsiębiorstwa.',
     'Nie wskazuj osób pełniących funkcje publiczne (urzędników w związku z pełnioną funkcją, radnych, prezydenta) ani osób z listy publicOfficials i keepNames.',
     'Kategorie: private_person_name, pesel, id_document, private_nip, birth_data, private_address, private_phone, private_email, bank_account, signature, health, property_register_number, land_parcel, vehicle_registration, business_secret, other.',
   ].join('\n\n'),

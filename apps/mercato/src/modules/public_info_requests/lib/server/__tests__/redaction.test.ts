@@ -1,6 +1,7 @@
 import type { PublicInfoRedactionMark, StoredDraftParagraph } from '../../../data/entities'
 import { contentHash } from '../../drafting/grounding'
 import { assertDraftExportable, readPiiChecked } from '../redaction'
+import { locateAiSpans } from '../caseServices'
 
 function paragraph(id: string, text: string, kind: StoredDraftParagraph['kind'] = 'point'): StoredDraftParagraph {
   return { id, kind, text, contentHash: contentHash(text), sources: [], flags: [], confirmedBy: null }
@@ -53,5 +54,20 @@ describe('readPiiChecked', () => {
   it('returns an empty record for missing or malformed options', () => {
     expect(readPiiChecked(null)).toEqual({})
     expect(readPiiChecked({ piiChecked: 'yes' })).toEqual({})
+  })
+})
+
+describe('locateAiSpans', () => {
+  const text = 'Proszę o informację czy Pan Adam Wiśniewski pełnił funkcję. Informuję, że Pan Adam Wiśniewski pełnił ją w 2020 r.'
+
+  it('finds every occurrence of the text the model returned, at exact offsets', () => {
+    const spans = locateAiSpans(text, [{ text: 'Adam Wiśniewski', category: 'private_person_name', confidence: 0.9 }])
+    expect(spans).toHaveLength(2)
+    expect(spans.map((span) => span.text)).toEqual(['Adam Wiśniewski', 'Adam Wiśniewski'])
+  })
+
+  it('drops model offsets that cut into a word', () => {
+    const start = text.indexOf('Adam') - 2
+    expect(locateAiSpans(text, [{ start, end: start + 17, category: 'private_person_name', confidence: 0.9 }])).toHaveLength(0)
   })
 })

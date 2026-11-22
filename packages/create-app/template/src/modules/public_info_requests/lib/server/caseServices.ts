@@ -496,6 +496,43 @@ export function toStoredParagraphs(paragraphs: DraftParagraph[]): StoredDraftPar
   }))
 }
 
+const WORD_CHAR = /[\p{L}\p{N}]/u
+
+function isWordBoundary(text: string, index: number): boolean {
+  if (index <= 0 || index >= text.length) return true
+  return !(WORD_CHAR.test(text[index - 1]) && WORD_CHAR.test(text[index]))
+}
+
+export function locateAiSpans(
+  text: string,
+  spans: Array<{ text?: string; start?: number; end?: number; category: string; confidence: number }>,
+): PiiSpan[] {
+  const located: PiiSpan[] = []
+  const seen = new Set<string>()
+  const push = (start: number, end: number, category: string, confidence: number) => {
+    const key = `${start}:${end}`
+    if (seen.has(key)) return
+    seen.add(key)
+    located.push({ start, end, category: (category as PiiSpan['category']) || 'other', detector: 'ai', confidence, text: text.slice(start, end) })
+  }
+  for (const span of spans) {
+    const needle = span.text?.trim()
+    if (needle) {
+      let from = 0
+      for (let index = text.indexOf(needle, from); index >= 0; index = text.indexOf(needle, from)) {
+        if (isWordBoundary(text, index) && isWordBoundary(text, index + needle.length)) push(index, index + needle.length, span.category, span.confidence)
+        from = index + needle.length
+      }
+      continue
+    }
+    if (span.start === undefined || span.end === undefined || span.start >= span.end || span.end > text.length) continue
+    if (!isWordBoundary(text, span.start) || !isWordBoundary(text, span.end)) continue
+    if (!text.slice(span.start, span.end).trim()) continue
+    push(span.start, span.end, span.category, span.confidence)
+  }
+  return located
+}
+
 export async function detectPii(params: {
   container: AwilixContainer
   scope: Scope & { userId: string }
@@ -514,16 +551,7 @@ export async function detectPii(params: {
         prompt: JSON.stringify({ text: params.text.slice(0, 6000), publicOfficials: params.publicOfficials, keepNames: params.keepNames }),
       })
     : null
-  const aiSpans: PiiSpan[] = (aiResult?.spans ?? [])
-    .filter((span) => span.end <= params.text.length && span.start < span.end)
-    .map((span) => ({
-      start: span.start,
-      end: span.end,
-      category: (span.category as PiiSpan['category']) ?? 'other',
-      detector: 'ai' as const,
-      confidence: span.confidence,
-      text: params.text.slice(span.start, span.end),
-    }))
+  const aiSpans: PiiSpan[] = locateAiSpans(params.text, aiResult?.spans ?? [])
     .filter((span) => !params.keepNames.some((name) => span.text.includes(name)) && !params.publicOfficials.some((name) => span.text.includes(name)))
   return mergeSpans([...ruleSpans, ...aiSpans], params.text)
 }

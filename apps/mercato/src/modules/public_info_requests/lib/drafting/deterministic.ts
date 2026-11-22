@@ -30,14 +30,16 @@ const LIST_ITEM_PATTERN = /^(?:\d{1,2}[.)]|[-•–])\s/u
 const ABBREVIATIONS = new Set([
   'ul', 'al', 'pl', 'tj', 'np', 'nr', 'ok', 'tel', 'im', 'św', 'ks', 'dr', 'prof', 'mgr', 'inż', 'pkt', 'ust', 'art',
   'poz', 'godz', 'ww', 'jw', 'tzw', 'm.in', 'szt', 'tys', 'mln', 'mld', 'woj', 'pow', 'dz', 'u', 'lit', 'zob', 'por',
+  'pn', 'tzn', 'zm', 'ds', 'sp', 'os', 'kpt', 'mjr', 'płk', 'hab', 'wg', 'zł', 'gr',
 ])
+const REQUEST_RESTATEMENT_PATTERN = /(?:wnios|zakres|pytani|proszę|prośb)/iu
+const CONTACT_LINE_MAX_WORDS = 8
 
 const BOILERPLATE_LINE_PATTERNS: RegExp[] = [
   /^[\p{Lu}\s.,\-–„”"]+$/u,
   /^\p{Lu}{2,}[.\-/][\p{Lu}\d.\-/]*\d[\p{Lu}\d.\-/]*$/u,
   /^[\p{L} ]+,\s*(?:dnia\s+)?\d{1,2}(?:\.\d{1,2}\.\d{4}|\s+\p{L}+\s+\d{4})/u,
   /^(?:dnia\s+)?\d{1,2}[.\-]\d{1,2}[.\-]\d{4}(?:\s*r\.?)?$/u,
-  /^(?:ul\.|tel\.|fax|e-mail|email|www\.|\d{2}-\d{3}\s)/iu,
   /^(?:Znak\s+sprawy|Nasz\s+znak|Wasz\s+znak|Dotyczy|Sprawa|Do:)/iu,
 ]
 
@@ -95,7 +97,10 @@ function extractMarkedSpan(text: string, position: number): string | null {
   return null
 }
 
+const CONTACT_LINE_PATTERN = /^(?:ul\.|tel\.|fax|e-mail|email|www\.|\d{2}-\d{3}\s)/iu
+
 function isBoilerplateLine(line: string): boolean {
+  if (CONTACT_LINE_PATTERN.test(line) && wordCount(line) <= CONTACT_LINE_MAX_WORDS) return true
   return BOILERPLATE_LINE_PATTERNS.some((pattern) => pattern.test(line))
 }
 
@@ -137,6 +142,9 @@ function dropHeaderLines(lines: string[]): string[] {
 
 function stripIntroClause(sentence: string): string {
   const informMatch = INFORM_PATTERN.exec(sentence)
+  if (informMatch && informMatch.index > 0 && REQUEST_RESTATEMENT_PATTERN.test(sentence.slice(0, informMatch.index))) {
+    return capitalize(sentence.slice(informMatch.index + informMatch[0].length).trim())
+  }
   const introMatch = INTRO_CLAUSE_PATTERN.exec(sentence)
   const startsWithIntro = INTRO_SENTENCE_PATTERN.test(sentence)
   if (!startsWithIntro && !(introMatch && informMatch && introMatch.index < informMatch.index)) return sentence

@@ -190,6 +190,36 @@ describe('draftFromReplies', () => {
   })
 })
 
+describe('draftFromReplies with a reply that restates the request', () => {
+  const reply: ReplyText = {
+    attachmentId: 'att-restated',
+    departmentName: 'Wydział Inwestycji Miasta',
+    pointPositions: [1],
+    text: [
+      'URZĄD MIASTA BYDGOSZCZY',
+      'Biuro Komunikacji Społecznej',
+      'Bydgoszcz, 10 października 2026 r.',
+      'Szanowni Państwo,',
+      'w odpowiedzi na wniosek o udostępnienie informacji publicznej dotyczącej inwestycji pn. „Budowa hali sportowej',
+      'przy ul. Testowej 5” w następującym zakresie:',
+      'Proszę o informację czy Pan Jan Testowy pełnił funkcję kierownika robót, na podstawie danych komórki merytorycznej informuję, że Pan Jan Testowy wprowadzony do umowy aneksem nr 3 w trakcie budowy hali przy',
+      'ul. Testowej 5 w Bydgoszczy pełnił funkcję kierownika robót elektrycznych w okresie 01.03.2021 r. do dnia 30.09.2021',
+      'r. (odbiór końcowy robót).',
+      'Łączę wyrazy szacunku,',
+      'Biuro Komunikacji Społecznej',
+      '85-102 Bydgoszcz, ul. Jezuicka 1',
+    ].join('\n'),
+  }
+  const ctx: LetterContext = { ...BASE_CONTEXT, points: [{ position: 1, text: 'Czy Pan Jan Testowy pełnił funkcję kierownika robót?' }] }
+
+  it('keeps only the answer, so the person named in the question appears once', () => {
+    const text = pointParagraph(draftFromReplies('answer', ctx, [reply]), 1).text
+    expect(text.match(/Jan Testowy/g)).toHaveLength(1)
+    expect(text).not.toContain('Proszę o informację')
+    expect(text).toContain('ul. Testowej 5 w Bydgoszczy pełnił funkcję kierownika robót elektrycznych w okresie 01.03.2021 r. do dnia 30.09.2021 r.')
+  })
+})
+
 describe('checkGrounding', () => {
   const drafted = draftFromReplies('answer', BASE_CONTEXT, [REPLY_COMMUNAL, REPLY_EDUCATION])
 

@@ -50,5 +50,13 @@ export const drafterOutputSchema = z.object({
 })
 
 export const piiDetectorOutputSchema = z.object({
-  spans: z.array(z.object({ start: z.number().int().min(0), end: z.number().int().min(1), category: z.string(), confidence: z.number().min(0).max(1) })),
+  spans: z.array(
+    z.object({
+      text: z.string().min(1).optional(),
+      start: z.number().int().min(0).optional(),
+      end: z.number().int().min(1).optional(),
+      category: z.string(),
+      confidence: z.number().min(0).max(1),
+    }),
+  ),
 })
