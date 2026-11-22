@@ -22,12 +22,12 @@ const EXPECTED = {
   '16': { departments: ['WSO'], letterType: 'no_statistics', manualText: 'Ile punktów sprzedaży alkoholu przybyło w Bydgoszczy od czasu objęcia funkcji Prezydenta przez Bruskiego do dnia dzisiejszego? Odpowiedź w trybie administracyjnym. Jerzy' },
   '17': { departments: ['ZDMiKP'], letterType: 'not_held_referral', referral: 'ZDMiKP' },
   '18': { departments: ['WGO'], letterType: 'answer' },
-  '293': { departments: ['WZiGK', 'SDZ'], letterType: 'answer' },
-  '307': { departments: ['WES'], letterType: 'answer' },
+  '293': { departments: ['WGK', 'SDZ'], letterType: 'answer' },
+  '307': { departments: ['WE'], letterType: 'answer' },
   '509': { departments: ['WAB'], letterType: 'clarification_request' },
-  '543': { departments: ['WZiGK', 'SDZ'], letterType: 'answer', similarTo: '293' },
+  '543': { departments: ['WGK', 'SDZ'], letterType: 'answer', similarTo: '293' },
   '590': { departments: ['WIM'], letterType: 'answer' },
-  '599': { departments: ['WES'], letterType: 'answer', similarTo: '307' },
+  '599': { departments: ['WE'], letterType: 'answer', similarTo: '307' },
 }
 
 let cookie = ''

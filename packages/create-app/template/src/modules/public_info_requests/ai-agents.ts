@@ -54,7 +54,8 @@ const routerAgent: AiAgentDefinition = {
   description: 'Proposes which departments should provide information for each question, with sources and legal flags.',
   systemPrompt: [
     COMMON_RULES,
-    'Dla każdego pytania wskaż komórkę organizacyjną z przekazanej listy (używaj wyłącznie podanych departmentId), która posiada informację, wraz z zakresem informacji do przygotowania i uzasadnieniem (zakres kompetencji, podobne sprawy z archiwum, przepis).',
+    'Dla każdego pytania wskaż komórkę organizacyjną z przekazanej listy (departmentId = skrót komórki z pola id, np. WE, ZDMiKP), która posiada informację, wraz z zakresem informacji do przygotowania i uzasadnieniem (zakres kompetencji, podobne sprawy z archiwum, przepis).',
+    'keywordSuggestion to propozycja reguł (słowa kluczowe, kody umów, podobne sprawy) — traktuj ją jako mocną wskazówkę i odchodź od niej tylko z wyraźnego powodu. Jeśli podobna sprawa z archiwum była przekazana do innego podmiotu, zaproponuj ten sam podmiot.',
     'Jednostki miejskie (municipal_unit) i podmioty zewnętrzne (external) są odrębnymi podmiotami zobowiązanymi — dodaj flagę separate_entity (art. 4 ust. 3 UDIP).',
     'Dodaj flagę published_in_bip, gdy informacja jest zwykle publikowana w BIP; personal_data, gdy pytanie dotyczy konkretnej osoby; processed_information, gdy wymaga przetworzenia.',
   ].join('\n\n'),

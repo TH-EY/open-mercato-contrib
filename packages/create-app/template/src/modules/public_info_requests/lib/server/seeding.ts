@@ -18,8 +18,24 @@ import { computeDeadlines, loadSettings, parseCaseNumber, type Scope } from './r
 import { extractDocumentText } from './textExtraction'
 import { ensurePublicInfoPartition } from './partition'
 
+const LEGACY_DEPARTMENT_SYMBOLS: Record<string, string> = { WES: 'WE', WZiGK: 'WGK' }
+
 export async function seedDepartments(em: EntityManager, scope: Scope): Promise<number> {
   const existing = await em.find(PublicInfoDepartment, { tenantId: scope.tenantId, organizationId: scope.organizationId })
+  const seedsBySymbol = new Map(DEPARTMENT_SEEDS.map((seed) => [seed.symbol, seed]))
+  let changed = false
+  for (const department of existing) {
+    const renamed = department.symbol ? LEGACY_DEPARTMENT_SYMBOLS[department.symbol] : undefined
+    if (renamed && !existing.some((candidate) => candidate.symbol === renamed)) {
+      department.symbol = renamed
+      changed = true
+    }
+    const seed = department.symbol ? seedsBySymbol.get(department.symbol) : undefined
+    if (seed?.contactHint && !department.contactHint) {
+      department.contactHint = seed.contactHint
+      changed = true
+    }
+  }
   const symbols = new Set(existing.map((department) => department.symbol))
   let created = 0
   for (const seed of DEPARTMENT_SEEDS) {
@@ -43,7 +59,7 @@ export async function seedDepartments(em: EntityManager, scope: Scope): Promise<
     )
     created += 1
   }
-  if (created > 0) await em.flush()
+  if (created > 0 || changed) await em.flush()
   return created
 }
 

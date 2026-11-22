@@ -43,7 +43,7 @@ describe('public_info_requests keyword routing', () => {
       ]),
       departments,
     )
-    expect(result.proposals[0].departmentId).toBe('WES')
+    expect(result.proposals[0].departmentId).toBe('WE')
     expect(result.proposals[0].pointPositions).toEqual([1, 2])
     expect(result.proposals[0].confidence).toBeGreaterThanOrEqual(0.25)
     expect(result.proposals[0].scopeText.startsWith('Prośba o informację w zakresie:')).toBe(true)
@@ -96,7 +96,7 @@ describe('public_info_requests keyword routing', () => {
       'Ilu bezdomnym zwierzętom (z podziałem na psy i koty) zapewniono opiekę w 2025 r.?',
       'Jaki był koszt usług weterynaryjnych i dokarmiania?',
     ])
-    expect(ids.slice(0, 3)).toEqual(expect.arrayContaining(['WZiGK', 'SDZ']))
+    expect(ids.slice(0, 3)).toEqual(expect.arrayContaining(['WGK', 'SDZ']))
   })
 
   it('boosts departments that answered similar archive cases', () => {
@@ -105,8 +105,8 @@ describe('public_info_requests keyword routing', () => {
     const withHints = proposeRoutingByKeywords(points, departments, [
       { caseNumber: 'BKS.IV.1431.307.2025', similarity: 0.8, departmentNames: ['Wydział Edukacji i Sportu'] },
     ])
-    expect(withoutHints.proposals.some((proposal) => proposal.departmentId === 'WES')).toBe(false)
-    expect(withHints.proposals[0].departmentId).toBe('WES')
+    expect(withoutHints.proposals.some((proposal) => proposal.departmentId === 'WE')).toBe(false)
+    expect(withHints.proposals[0].departmentId).toBe('WE')
     expect(withHints.proposals[0].sources).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ kind: 'archive', ref: 'BKS.IV.1431.307.2025', label: expect.stringContaining('Podobna sprawa BKS.IV.1431.307.2025') }),

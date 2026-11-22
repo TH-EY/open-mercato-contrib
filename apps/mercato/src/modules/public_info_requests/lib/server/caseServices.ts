@@ -243,6 +243,9 @@ export async function suggestRouting(params: {
   let proposals: RoutingProposal[] = []
   let flags: RoutingFlag[] = []
   let generatedBy: RoutingSuggestion['generatedBy'] = 'keywords'
+  const keywordResult = proposeRoutingByKeywords(pointInputs, departmentLikes, archiveHints)
+  const promptIdOf = new Map(departments.map((department) => [department.id, department.symbol?.trim() || department.id]))
+  const idOfPromptId = new Map(Array.from(promptIdOf.entries()).map(([id, promptId]) => [promptId, id]))
   const aiResult = await runAssistantObject({
     agentId: 'public_info_requests.router',
     schemaName: 'UdipRoutingProposal',
@@ -252,22 +255,33 @@ export async function suggestRouting(params: {
     prompt: JSON.stringify({
       points: pointInputs,
       departments: departmentLikes.map((department) => ({
-        id: department.id,
+        id: promptIdOf.get(department.id) ?? department.id,
         name: department.name,
         kind: department.kind,
         competenceScope: department.competenceScope,
         keywords: department.keywords.slice(0, 30),
       })),
       similarCases: archiveHints,
+      keywordSuggestion: keywordResult.proposals.map((proposal) => ({
+        departmentId: promptIdOf.get(proposal.departmentId) ?? proposal.departmentId,
+        pointPositions: proposal.pointPositions,
+        reason: proposal.sources.map((source) => source.label).join('; '),
+      })),
     }),
   })
-  const validIds = new Set(departments.map((department) => department.id))
-  if (aiResult && aiResult.proposals.some((proposal) => validIds.has(proposal.departmentId))) {
-    proposals = aiResult.proposals.filter((proposal) => validIds.has(proposal.departmentId))
-    flags = aiResult.flags.filter((flag) => !flag.departmentId || validIds.has(flag.departmentId))
+  const toInternalId = (value: string | undefined) => (value ? idOfPromptId.get(value) ?? (promptIdOf.has(value) ? value : undefined) : undefined)
+  const aiProposals = (aiResult?.proposals ?? [])
+    .map((proposal) => ({ ...proposal, departmentId: toInternalId(proposal.departmentId) ?? '' }))
+    .filter((proposal) => proposal.departmentId.length > 0)
+  if (aiResult && aiProposals.length > 0) {
+    proposals = aiProposals
+    flags = aiResult.flags.flatMap((flag) => {
+      if (!flag.departmentId) return [flag]
+      const departmentId = toInternalId(flag.departmentId)
+      return departmentId ? [{ ...flag, departmentId }] : []
+    })
     generatedBy = 'ai'
   } else {
-    const keywordResult = proposeRoutingByKeywords(pointInputs, departmentLikes, archiveHints)
     proposals = keywordResult.proposals
     flags = keywordResult.flags
   }
