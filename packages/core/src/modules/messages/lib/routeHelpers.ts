@@ -1,7 +1,12 @@
 import type { EntityManager } from '@mikro-orm/postgresql'
+import type { z } from 'zod'
+import { isSchedulingAvailableFor } from './scheduledSend'
 import { resolveRequestContext } from '@open-mercato/shared/lib/api/context'
+import { CrudHttpError } from '@open-mercato/shared/lib/crud/errors'
 import { findOneWithDecryption } from '@open-mercato/shared/lib/encryption/find'
+import { resolveTranslations } from '@open-mercato/shared/lib/i18n/server'
 import { Message, MessageRecipient } from '../data/entities'
+import { messageRouteIdSchema } from '../data/validators'
 import {
   CHANNEL_THREAD_FALLBACK_FEATURE,
   EXTERNAL_CONVERSATION_SOURCE_ENTITY_TYPE,
@@ -30,10 +35,14 @@ export type MessageScope = {
   userId: string
 }
 
-export async function resolveMessageContext(req: Request): Promise<{
+export async function resolveMessageContext(req: Request, messageId?: string): Promise<{
   ctx: Awaited<ReturnType<typeof resolveRequestContext>>['ctx']
   scope: MessageScope
 }> {
+  if (messageId !== undefined && !messageRouteIdSchema.safeParse(messageId).success) {
+    const { translate } = await resolveTranslations()
+    throw new CrudHttpError(404, { error: translate('api.errors.notFound', 'Not found') })
+  }
   const { ctx } = await resolveRequestContext(req)
   return {
     ctx,
@@ -235,4 +244,23 @@ export async function canUseMessageEmailFeature(
     tenantId: scope.tenantId,
     organizationId: scope.organizationId,
   })
+}
+
+/** First message per top-level field of a zod error, e.g. `{ scheduledAt: 'messages.errors.scheduleInPast' }`. */
+export function buildValidationFieldErrors(error: z.ZodError): Record<string, string> {
+  const fieldErrors: Record<string, string> = {}
+  for (const issue of error.issues) {
+    const field = issue.path[0]
+    if (field === undefined || String(field) in fieldErrors) continue
+    fieldErrors[String(field)] = issue.message
+  }
+  return fieldErrors
+}
+
+/** Scheduling needs the scheduler module and an organization, whose release tick sends the message. */
+export async function refuseUnsupportedSchedule(container: unknown, organizationId: string | null | undefined): Promise<Response | null> {
+  if (isSchedulingAvailableFor(container, organizationId)) return null
+  const { translate } = await resolveTranslations()
+  const error = translate('messages.errors.schedulingUnavailable', 'Scheduled sending is not available.')
+  return Response.json({ error, fieldErrors: { scheduledAt: error } }, { status: 422 })
 }

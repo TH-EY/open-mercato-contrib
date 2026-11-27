@@ -1,5 +1,7 @@
 import { asValue } from 'awilix'
 import type { AppContainer } from '@open-mercato/shared/lib/di/container'
+import { defineProcessDiRegistrar, registerProcessActivation } from '@open-mercato/shared/lib/di/process-registrar'
+import { getRequestScopeContainer, runInRequestScope } from '@open-mercato/shared/lib/di/request-scope'
 import { registerEmailTransport } from '@open-mercato/shared/lib/email/transport'
 import {
   CommunicationChannel,
@@ -11,12 +13,13 @@ import {
 } from './data/entities'
 import { getChannelAdapterRegistry } from './lib/adapter-registry-singleton'
 import { ensureTestSeedAdapterRegistered } from './lib/test-seed'
-import { sendAsUser } from './lib/send-as-user'
+import { sendAsUser, validateSenderChannel } from './lib/send-as-user'
 import { isSystemEmailTransportConfigured, sendSystemEmail } from './lib/system-email'
 import { resolveChannelTypeSafely } from './lib/resolve-channel-type'
+import { enqueueOutboundDelivery } from './lib/queue'
 import { resolveChannelThreadAccessSafely } from './lib/channel-thread-access'
 
-export function register(container: AppContainer) {
+function registerLegacy(container: AppContainer) {
   // Test-only: register the network-free stub channel adapter when
   // `OM_ENABLE_TEST_CHANNEL_SEEDING` is set (no-op in production). Lets the
   // integration harness connect a channel + complete the outbound send chain.
@@ -24,10 +27,18 @@ export function register(container: AppContainer) {
   ensureTestSeedAdapterRegistered()
   registerEmailTransport({
     id: 'communication_channels',
-    send: (payload) => sendSystemEmail(container, payload),
+    send: async (payload) => {
+      await sendSystemEmail(container, payload)
+    },
+    sendWithResult: (payload) => sendSystemEmail(container, payload),
     isConfigured: isSystemEmailTransportConfigured,
+    supportsMultipleRecipients: true,
   })
 
+  registerServices(container)
+}
+
+function registerServices(container: AppContainer) {
   container.register({
     // Entity class registrations (for EntityManager lookups by string)
     CommunicationChannel: asValue(CommunicationChannel),
@@ -45,6 +56,9 @@ export function register(container: AppContainer) {
     // In-process send-as-user facade. Cross-module callers (e.g. the customers
     // compose route) resolve this instead of making an HTTP self-call.
     communicationChannelsSendAsUser: asValue(sendAsUser),
+    // Up-front ownership + deliverability check for a mailbox the messages
+    // module will only hand a message to later (scheduled send).
+    communicationChannelsValidateSenderChannel: asValue(validateSenderChannel),
     communicationChannelsSendSystemEmail: asValue(sendSystemEmail),
 
     // Cross-module channel-type lookup. The messages compose route resolves this
@@ -60,5 +74,41 @@ export function register(container: AppContainer) {
     // module owns. Absent module or failed lookup reads as "internal thread",
     // which leaves the participant rule in force.
     communicationChannelsResolveChannelThreadAccess: asValue(resolveChannelThreadAccessSafely),
+
+    // Cross-module outbound re-enqueue. The messages email retry tick resolves
+    // this to recover a mailbox delivery whose queue job was lost; absent module
+    // means there is no mailbox path to recover.
+    communicationChannelsEnqueueOutboundDelivery: asValue(enqueueOutboundDelivery),
   })
 }
+
+
+async function sendFromCurrentCaller(payload: Parameters<typeof sendSystemEmail>[1]): ReturnType<typeof sendSystemEmail> {
+  const active = getRequestScopeContainer()
+  if (active) return sendSystemEmail(active as AppContainer, payload)
+  return runInRequestScope(async () => {
+    const { createRequestContainer } = await import('@open-mercato/shared/lib/di/container')
+    const caller = await createRequestContainer()
+    try {
+      return await sendSystemEmail(caller, payload)
+    } finally {
+      await caller.dispose()
+    }
+  })
+}
+
+export const register = defineProcessDiRegistrar((container: AppContainer) => {
+  registerServices(container)
+  registerProcessActivation(container, () => {
+    ensureTestSeedAdapterRegistered()
+    registerEmailTransport({
+      id: 'communication_channels',
+      send: async (payload) => {
+        await sendFromCurrentCaller(payload)
+      },
+      sendWithResult: sendFromCurrentCaller,
+      isConfigured: isSystemEmailTransportConfigured,
+      supportsMultipleRecipients: true,
+    })
+  })
+}, { legacy: registerLegacy })

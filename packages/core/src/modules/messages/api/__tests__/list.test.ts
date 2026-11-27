@@ -15,6 +15,7 @@ import {
 } from 'kysely'
 import { Message, MessageObject } from '../../data/entities'
 import { User } from '../../../auth/data/entities'
+import { lookupHashCandidates } from '@open-mercato/shared/lib/encryption/aes'
 
 const tenantId = '11111111-1111-4111-8111-111111111111'
 const orgId = '22222222-2222-4222-8222-222222222222'
@@ -180,5 +181,78 @@ describe('messages GET — encrypted-sort audit (#3386 P3)', () => {
     expect(body.items).toHaveLength(2)
     expect(body.items[0]!.subject).toBe('Subject msg-a')
     expect(body.items[1]!.subject).toBe('Subject msg-b')
+  })
+})
+
+describe('messages GET — externalEmail filter', () => {
+  it('matches external_email_hash OR a scoped participant with the same hash candidates', async () => {
+    const res = await GET(new Request(`http://localhost/api/messages?externalEmail=second%40example.com`))
+    expect(res.status).toBe(200)
+
+    const scopeQuery = recordedQueries.find(isScopeQuery)
+    expect(scopeQuery).toBeDefined()
+    const sqlText = scopeQuery!.sql.toLowerCase()
+    expect(sqlText).toMatch(/"m"\."external_email_hash" in \(.+\) or exists \(select 1 as "one" from "message_external_participants" as "mep"/)
+    expect(sqlText).toContain('"mep"."message_id" = "m"."id"')
+    expect(sqlText).toContain('"mep"."tenant_id" = $')
+    expect(sqlText).toContain('"mep"."organization_id" = $')
+    expect(sqlText).toContain('"mep"."email_hash" in (')
+    expect(sqlText).toMatch(/\("mep"\."role" <> \$\d+ or "m"\."sender_user_id" = \$\d+\)/)
+    expect(scopeQuery!.parameters).toEqual(expect.arrayContaining(['bcc', userId]))
+
+    const candidates = lookupHashCandidates('second@example.com')
+    for (const candidate of candidates) {
+      expect(scopeQuery!.parameters.filter((value) => value === candidate)).toHaveLength(2)
+    }
+    expect(scopeQuery!.parameters).toEqual(expect.arrayContaining([tenantId, orgId]))
+  })
+})
+
+describe('messages GET without the attachments module (#9201)', () => {
+  function useEmWithoutAttachments() {
+    resolveMessageContextMock.mockResolvedValue({
+      ctx: {
+        container: {
+          resolve: (name: string) => (name === 'em'
+            ? { ...buildMockEm(), getMetadata: () => ({ find: () => false }) }
+            : null),
+        },
+      },
+      scope: { tenantId, organizationId: orgId, userId },
+    })
+  }
+
+  function referencesAttachmentsTable(): boolean {
+    return recordedQueries.some((query) => /"attachments"/.test(query.sql))
+  }
+
+  it('loads the inbox with zero attachment counts and never queries the attachments table', async () => {
+    useEmWithoutAttachments()
+
+    const res = await GET(new Request('http://localhost/api/messages?pageSize=2'))
+    const body = await res.json() as { items: { id: string; attachmentCount: number; hasAttachments: boolean }[] }
+
+    expect(res.status).toBe(200)
+    expect(body.items.map((item) => [item.attachmentCount, item.hasAttachments])).toEqual([[0, false], [0, false]])
+    expect(referencesAttachmentsTable()).toBe(false)
+  })
+
+  it('matches nothing for hasAttachments=true and adds no condition for hasAttachments=false', async () => {
+    useEmWithoutAttachments()
+    await GET(new Request('http://localhost/api/messages?pageSize=2&hasAttachments=true'))
+    const withFilter = recordedQueries.find(isScopeQuery)
+    expect(withFilter?.parameters).toContain('00000000-0000-0000-0000-000000000000')
+    expect(referencesAttachmentsTable()).toBe(false)
+
+    recordedQueries.length = 0
+    await GET(new Request('http://localhost/api/messages?pageSize=2&hasAttachments=false'))
+    const withoutFilter = recordedQueries.find(isScopeQuery)
+    expect(withoutFilter?.parameters).not.toContain('00000000-0000-0000-0000-000000000000')
+    expect(referencesAttachmentsTable()).toBe(false)
+  })
+
+  it('still counts attachments when the module is registered', async () => {
+    await GET(new Request('http://localhost/api/messages?pageSize=2'))
+    expect(referencesAttachmentsTable()).toBe(true)
   })
 })

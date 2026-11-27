@@ -1,18 +1,21 @@
 "use client"
 
 import * as React from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { useT } from '@open-mercato/shared/lib/i18n/context'
 import { useOrganizationScopeVersion } from '@open-mercato/shared/lib/frontend/useOrganizationScope'
-import { useAppEvent } from '@open-mercato/ui/backend/injection/useAppEvent'
+import { BRIDGE_RECONNECTED_EVENT_ID, useAppEvent } from '@open-mercato/ui/backend/injection/useAppEvent'
 import { useMessageDetailsQueries } from './useMessageDetailsQueries'
 import { useMessageDetailsActions } from './useMessageDetailsActions'
 import { useMessageDetailsConversation } from './useMessageDetailsConversation'
+import { messageListHref, parseMessageFolder } from '../../messageFolderRoutes'
 
 export function useMessageDetails(id: string) {
   const t = useT()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const listHref = messageListHref(parseMessageFolder(searchParams?.get('folder')))
   const scopeVersion = useOrganizationScopeVersion()
   const queryClient = useQueryClient()
 
@@ -44,7 +47,7 @@ export function useMessageDetails(id: string) {
   )
 
   useAppEvent(
-    'om:bridge:reconnected',
+    BRIDGE_RECONNECTED_EVENT_ID,
     () => {
       void queryClient.invalidateQueries({ queryKey: ['messages', 'detail', id] })
     },
@@ -60,8 +63,8 @@ export function useMessageDetails(id: string) {
     detailQuery: queryState.detailQuery,
     attachments: queryState.attachments,
     isArchived,
-    onDeleted: () => router.push('/backend/messages'),
-    onMarkedUnread: () => router.push('/backend/messages'),
+    onDeleted: () => router.push(listHref),
+    onMarkedUnread: () => router.push(listHref),
     refreshDetailWithoutAutoMarkRead: queryState.refreshDetailWithoutAutoMarkRead,
     suppressAutoMarkRead: queryState.suppressAutoMarkRead,
   })
@@ -72,13 +75,14 @@ export function useMessageDetails(id: string) {
   })
 
   const backToList = React.useCallback(() => {
-    router.push('/backend/messages')
-  }, [router])
+    router.push(listHref)
+  }, [router, listHref])
 
   return {
     t,
     router,
     backToList,
+    listHref,
     ...queryState,
     ...conversationState,
     ...actionState,
